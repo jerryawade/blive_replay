@@ -31,8 +31,34 @@ class UserManager
 
         // Create users file if it doesn't exist
         if (!file_exists($this->usersFile)) {
-            file_put_contents($this->usersFile, json_encode([], JSON_PRETTY_PRINT));
+            // Create with default admin user
+            $defaultAdmin = [
+                'admin' => [
+                    'password' => password_hash('admin123', PASSWORD_DEFAULT),
+                    'role' => self::ROLE_ADMIN,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'last_login' => null,
+                    'is_default' => true
+                ]
+            ];
+            file_put_contents($this->usersFile, json_encode($defaultAdmin, JSON_PRETTY_PRINT));
             chmod($this->usersFile, 0600); // Secure file permissions
+        } else {
+            // Check if users file is empty or has no users
+            $users = $this->getUsers();
+            if (empty($users)) {
+                // Create default admin user
+                $defaultAdmin = [
+                    'admin' => [
+                        'password' => password_hash('admin123', PASSWORD_DEFAULT),
+                        'role' => self::ROLE_ADMIN,
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'last_login' => null,
+                        'is_default' => true
+                    ]
+                ];
+                file_put_contents($this->usersFile, json_encode($defaultAdmin, JSON_PRETTY_PRINT));
+            }
         }
 
         // Create tokens file if it doesn't exist
@@ -90,6 +116,15 @@ class UserManager
 
         // Get current users
         $users = $this->getUsers();
+
+        // Check if the default admin user exists and remove it
+        if (isset($users['admin']) && isset($users['admin']['is_default']) && $users['admin']['is_default'] === true) {
+            unset($users['admin']);
+            $this->saveUsers($users);
+
+            // Re-get users after removing the default admin
+            $users = $this->getUsers();
+        }
 
         // Check if username already exists
         if (isset($users[$username])) {
