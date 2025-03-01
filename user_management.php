@@ -31,34 +31,8 @@ class UserManager
 
         // Create users file if it doesn't exist
         if (!file_exists($this->usersFile)) {
-            // Create with default admin user
-            $defaultAdmin = [
-                'admin' => [
-                    'password' => password_hash('admin123', PASSWORD_DEFAULT),
-                    'role' => self::ROLE_ADMIN,
-                    'created_at' => date('Y-m-d H:i:s'),
-                    'last_login' => null,
-                    'is_default' => true
-                ]
-            ];
-            file_put_contents($this->usersFile, json_encode($defaultAdmin, JSON_PRETTY_PRINT));
+            file_put_contents($this->usersFile, json_encode([], JSON_PRETTY_PRINT));
             chmod($this->usersFile, 0600); // Secure file permissions
-        } else {
-            // Check if users file is empty or has no users
-            $users = $this->getUsers();
-            if (empty($users)) {
-                // Create default admin user
-                $defaultAdmin = [
-                    'admin' => [
-                        'password' => password_hash('admin123', PASSWORD_DEFAULT),
-                        'role' => self::ROLE_ADMIN,
-                        'created_at' => date('Y-m-d H:i:s'),
-                        'last_login' => null,
-                        'is_default' => true
-                    ]
-                ];
-                file_put_contents($this->usersFile, json_encode($defaultAdmin, JSON_PRETTY_PRINT));
-            }
         }
 
         // Create tokens file if it doesn't exist
@@ -116,15 +90,6 @@ class UserManager
 
         // Get current users
         $users = $this->getUsers();
-
-        // Check if the default admin user exists and remove it
-        if (isset($users['admin']) && isset($users['admin']['is_default']) && $users['admin']['is_default'] === true) {
-            unset($users['admin']);
-            $this->saveUsers($users);
-
-            // Re-get users after removing the default admin
-            $users = $this->getUsers();
-        }
 
         // Check if username already exists
         if (isset($users[$username])) {
@@ -625,6 +590,10 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                 </div>
                 <div class="modal-footer"
                      style="position: absolute; bottom: 0; left: 0; right: 0; background-color: white; border-top: 1px solid #dee2e6;">
+                    <button type="button" class="btn btn-info icon-btn me-auto" data-bs-dismiss="modal" id="viewUsageGraphBtn">
+                        <i class="bi bi-bar-chart-line"></i>
+                        Usage Graph
+                    </button>
                     <button type="button" class="btn btn-secondary icon-btn" data-bs-dismiss="modal">
                         <i class="bi bi-x-lg"></i>
                         Close
@@ -659,6 +628,34 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                             onclick="handleDeleteUser(document.getElementById('deleteUserName').textContent)">
                         <i class="bi bi-trash"></i>
                         Delete User
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Usage Graph Modal -->
+    <div class="modal fade" id="usageGraphModal" tabindex="-1" aria-labelledby="usageGraphModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="usageGraphModalLabel">
+                        <i class="bi bi-bar-chart-line me-2"></i>
+                        User Activity Trends
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="min-height: 500px;">
+                    <!-- Hidden field to store selected username -->
+                    <input type="hidden" id="graphModalUsername" value="">
+
+                    <!-- React component will be rendered here -->
+                    <div id="usageGraphContainer"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary icon-btn" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i>
+                        Close
                     </button>
                 </div>
             </div>
@@ -807,7 +804,7 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                                                 <i class="bi bi-shield"></i>
                                             </span>
                                             <select class="form-select form-select-sm" name="new_role" onchange="handleRoleChange(this.form)">
-                                                <option value="viewer" ${role === 'viewer' ? 'selected' : ''}>
+<option value="viewer" ${role === 'viewer' ? 'selected' : ''}>
                                                     Viewer
                                                 </option>
                                                 <option value="admin" ${role === 'admin' ? 'selected' : ''}>
@@ -896,6 +893,42 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                         console.error('Error:', error);
                         showFormFeedback(this, 'Error adding user', 'danger');
                     }
+                });
+            }
+
+            // Set up the button to view usage graphs
+            const viewUsageGraphBtn = document.getElementById('viewUsageGraphBtn');
+
+            if (viewUsageGraphBtn) {
+                viewUsageGraphBtn.addEventListener('click', function() {
+                    // Get the first user in the table or default to the current user
+                    const userRows = document.querySelectorAll('#usersModal table tbody tr');
+                    let username = '<?php echo htmlspecialchars($currentUsername); ?>';
+
+                    if (userRows.length > 0) {
+                        username = userRows[0].dataset.username || username;
+                    }
+
+                    // Set the username in the hidden field
+                    document.getElementById('graphModalUsername').value = username;
+
+                    // Show the graph modal
+                    const graphModal = new bootstrap.Modal(document.getElementById('usageGraphModal'));
+                    graphModal.show();
+                });
+            }
+
+            // When the graph modal is shown, render the React component
+            const usageGraphModal = document.getElementById('usageGraphModal');
+            if (usageGraphModal) {
+                usageGraphModal.addEventListener('shown.bs.modal', function() {
+                    // Prevent body scrolling
+                    document.body.style.overflow = 'hidden';
+                });
+
+                // Restore body scrolling when modal is hidden
+                usageGraphModal.addEventListener('hidden.bs.modal', function() {
+                    document.body.style.overflow = '';
                 });
             }
         });
