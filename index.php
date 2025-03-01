@@ -482,7 +482,7 @@ if (isAdmin()) {
 
 include 'templates/footer.php';
 
-// Add scheduler JavaScript if enabled (after footer.php is included)
+// Add scheduler JavaScript if enabled
 if (isAdmin() && isset($settings['enable_scheduler']) && $settings['enable_scheduler']) {
     echo '<script src="assets/js/recording_schedule.js"></script>';
 }
@@ -500,5 +500,166 @@ if (isAuthenticated()) {
         }
     });
     </script>';
+}
+
+if (isAdmin()) {
+    echo '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+  async function loadAllUsersActivityGraph(timeRange = "week") {
+    const container = document.getElementById("usageGraphContainer");
+    if (!container) return;
+    
+    // Show loading indicator
+    container.innerHTML = `<div class="text-center p-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-3">Loading activity data for all users...</p>
+    </div>`;
+    
+    try {
+      // First, get the list of all users
+      const response = await fetch(`get_all_users_activity.php?timeRange=${timeRange}`);
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || "Failed to load data");
+      }
+      
+      // Prepare chart HTML
+      const chartHTML = `
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">User Activity Comparison</h5>
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-primary ${timeRange === "day" ? "active" : ""}" data-range="day">Day</button>
+              <button class="btn btn-outline-primary ${timeRange === "week" ? "active" : ""}" data-range="week">Week</button>
+              <button class="btn btn-outline-primary ${timeRange === "month" ? "active" : ""}" data-range="month">Month</button>
+              <button class="btn btn-outline-primary ${timeRange === "year" ? "active" : ""}" data-range="year">Year</button>
+            </div>
+          </div>
+        </div>
+        <div style="height: 400px">
+          <canvas id="activityChart"></canvas>
+        </div>
+      `;
+      
+      container.innerHTML = chartHTML;
+      
+      // Create chart
+      const ctx = document.getElementById("activityChart").getContext("2d");
+      
+      // Set up the chart data
+      const chartData = {
+        labels: data.users,
+        datasets: [
+          {
+            label: "Video Plays",
+            data: data.videoPlays,
+            backgroundColor: "rgba(75, 192, 192, 0.7)",
+            borderColor: "rgb(75, 192, 192)",
+            borderWidth: 1
+          },
+          {
+            label: "Livestream Views",
+            data: data.livestreamViews,
+            backgroundColor: "rgba(153, 102, 255, 0.7)",
+            borderColor: "rgb(153, 102, 255)",
+            borderWidth: 1
+          }
+        ]
+      };
+      
+      const chart = new Chart(ctx, {
+        type: "bar",
+        data: chartData,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "top",
+            },
+            title: {
+              display: true,
+              text: `Activity by User (${timeRange.charAt(0).toUpperCase() + timeRange.slice(1)})`
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: "Number of Actions"
+              },
+              ticks: {
+                precision: 0
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: "Users"
+              }
+            }
+          }
+        }
+      });
+      
+      // Set up time range buttons
+      document.querySelectorAll("[data-range]").forEach(btn => {
+        btn.addEventListener("click", function() {
+          document.querySelectorAll("[data-range]").forEach(b => b.classList.remove("active"));
+          this.classList.add("active");
+          loadAllUsersActivityGraph(this.dataset.range);
+        });
+      });
+      
+    } catch (error) {
+      container.innerHTML = `
+        <div class="alert alert-danger">
+          <h5><i class="bi bi-exclamation-triangle-fill me-2"></i> Error Loading Data</h5>
+          <p>${error.message}</p>
+          <button class="btn btn-sm btn-outline-danger" onclick="loadAllUsersActivityGraph(\'week\')">
+            <i class="bi bi-arrow-clockwise me-1"></i> Try Again
+          </button>
+        </div>
+      `;
+      console.error(error);
+    }
+  }
+  
+  // Set up graph modal event
+  document.addEventListener("DOMContentLoaded", function() {
+    const viewUsageGraphBtn = document.getElementById("viewUsageGraphBtn");
+    const usageGraphModal = document.getElementById("usageGraphModal");
+    
+    if (viewUsageGraphBtn && usageGraphModal) {
+      viewUsageGraphBtn.addEventListener("click", function() {
+        // Show modal first
+        const graphModal = new bootstrap.Modal(usageGraphModal);
+        graphModal.show();
+        
+        // Load chart with a slight delay to ensure modal is visible
+        setTimeout(() => {
+          loadAllUsersActivityGraph("week");
+        }, 300);
+      });
+      
+        usageGraphModal.addEventListener("hidden.bs.modal", function() {
+        // Find and remove any leftover modal backdrops
+        const backdrops = document.querySelectorAll(\'.modal-backdrop\');
+        backdrops.forEach(backdrop => {
+          backdrop.remove();
+        });
+        
+        // Reset body styles
+        document.body.classList.remove(\'modal-open\');
+        document.body.style.overflow = \'\';
+        document.body.style.paddingRight = \'\';
+      });
+    }
+  });
+  </script>';
 }
 ?>
