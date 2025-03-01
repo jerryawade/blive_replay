@@ -68,6 +68,19 @@ if (isset($_POST['login']) && !$rateLimited) {
                 Sign In
             </h4>
 
+            <?php if (file_exists('users.json')): ?>
+                <?php
+                $usersJson = file_get_contents('users.json');
+                $users = json_decode($usersJson, true);
+                if (isset($users['admin']) && isset($users['admin']['is_default']) && $users['admin']['is_default'] === true):
+                    ?>
+                    <div class="alert alert-info mb-4 d-flex align-items-center" role="alert">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <div>Default admin credentials are available:<br>Username: <strong>admin</strong><br>Password: <strong>admin123</strong></div>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+
             <!-- CSRF Token -->
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
 
