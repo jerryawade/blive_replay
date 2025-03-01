@@ -503,7 +503,7 @@ if (isAuthenticated()) {
 }
 
 if (isAdmin()) {
-    echo '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  echo '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
   async function loadAllUsersActivityGraph(timeRange = "week") {
     const container = document.getElementById("usageGraphContainer");
