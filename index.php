@@ -292,21 +292,24 @@ function formatVLCStreamUrl($url)
 {
     $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
     if (stripos($userAgent, 'Mac') !== false || stripos($userAgent, 'Linux') !== false) {
-        // Remove any existing vlc:// or srt:// prefixes
-        $url = preg_replace('#^(vlc://|srt://)#', '', $url);
+        // Remove any existing vlc:// or other protocol prefixes
+        $url = preg_replace('#^(vlc://|srt://|rtsp://|rtmp://|srtsp://|rtp://|mms://|udp://)#', '', $url);
 
         // Remove any leading slashes
         $url = preg_replace('#^//#', '', $url);
 
-        // Add two slashes after srt:// if the URL starts with srt://
-        if (strpos($url, 'srt://') === 0) {
-            $url = 'srt:////' . substr($url, 6); // 6 is the length of 'srt://'
+        // Add two slashes after protocol if the URL starts with it
+        $protocols = ['srt://', 'rtsp://', 'rtmp://', 'srtsp://', 'rtp://', 'mms://', 'udp://'];
+        foreach ($protocols as $protocol) {
+            if (strpos($url, substr($protocol, 0, -2)) === 0) {
+                $url = substr($protocol, 0, -2) . '//' . substr($url, strlen(substr($protocol, 0, -2)));
+            }
         }
 
         // Prepend vlc:// to the URL
         return 'vlc://' . $url;
     } else {
-        $url = preg_replace('#^(vlc://|srt://)#', '', $url);
+        $url = preg_replace('#^(vlc://|srt://|rtsp://|rtmp://|srtsp://|rtp://|mms://|udp://)#', '', $url);
         $url = preg_replace('#^//#', '', $url);
         return 'vlc://' . $url;
     }
