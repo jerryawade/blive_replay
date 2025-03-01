@@ -5,6 +5,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="activityLogModalLabel">System Logs</h5>
+                <div class="auto-refresh-indicator">
+                    &nbsp;<span class="small text-muted">Auto-refreshing</span>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" style="height: calc(100vh - 250px); padding: 0;">
@@ -72,6 +75,16 @@
                                 </thead>
                                 <tbody id="activityLogTableBody">
                                 <!-- Activity log content will be loaded here -->
+                                <tr>
+                                    <td colspan="4" class="text-center">
+                                        <div class="log-loading-spinner">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading user activity logs...</span>
+                                            </div>
+                                            <p class="mt-2">Loading user activity logs...</p>
+                                        </div>
+                                    </td>
+                                </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -81,7 +94,14 @@
                              style="height: 100%; overflow-y: auto; overflow-x: hidden;">
                             <div style="display: flex; flex-direction: column; min-height: 100%;">
                                 <pre class="ffmpeg-log-pre"
-                                     style="margin: 0; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; flex-grow: 1;"></pre>
+                                     style="margin: 0; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; flex-grow: 1;">
+<div class="log-loading-spinner">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading FFmpeg logs...</span>
+    </div>
+    <p class="mt-2">Loading FFmpeg logs...</p>
+</div>
+                                </pre>
                             </div>
                         </div>
 
@@ -90,7 +110,14 @@
                              style="height: 100%; overflow-y: auto; overflow-x: hidden;">
                             <div style="display: flex; flex-direction: column; min-height: 100%;">
                                 <pre class="scheduler-log-pre"
-                                     style="margin: 0; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; flex-grow: 1;"></pre>
+                                     style="margin: 0; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; flex-grow: 1;">
+<div class="log-loading-spinner">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading scheduler logs...</span>
+    </div>
+    <p class="mt-2">Loading scheduler logs...</p>
+</div>
+                                </pre>
                             </div>
                         </div>
 
@@ -99,7 +126,14 @@
                              style="height: 100%; overflow-y: auto; overflow-x: hidden;">
                             <div style="display: flex; flex-direction: column; min-height: 100%;">
                                 <pre class="scheduler-log-file-pre"
-                                     style="margin: 0; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; flex-grow: 1;"></pre>
+                                     style="margin: 0; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; flex-grow: 1;">
+<div class="log-loading-spinner">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading scheduler log file...</span>
+    </div>
+    <p class="mt-2">Loading scheduler log file...</p>
+</div>
+                                </pre>
                             </div>
                         </div>
 
@@ -108,15 +142,30 @@
                              style="height: 100%; overflow-y: auto; overflow-x: hidden;">
                             <div style="display: flex; flex-direction: column; min-height: 100%;">
                                 <pre class="stream-log-pre"
-                                     style="margin: 0; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; flex-grow: 1; font-family: monospace;"></pre>
+                                     style="margin: 0; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; flex-grow: 1; font-family: monospace;">
+<div class="log-loading-spinner">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading stream check logs...</span>
+    </div>
+    <p class="mt-2">Loading stream check logs...</p>
+</div>
+                                </pre>
                             </div>
                         </div>
+
                         <!-- Debug Log Content -->
                         <div class="tab-pane fade" id="debugLogContent" role="tabpanel"
                              style="height: 100%; overflow-y: auto; overflow-x: hidden;">
                             <div style="display: flex; flex-direction: column; min-height: 100%;">
                                 <pre class="debug-log-pre"
-                                     style="margin: 0; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; flex-grow: 1; font-family: monospace;"></pre>
+                                     style="margin: 0; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; flex-grow: 1; font-family: monospace;">
+<div class="log-loading-spinner">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading debug logs...</span>
+    </div>
+    <p class="mt-2">Loading debug logs...</p>
+</div>
+                                </pre>
                             </div>
                         </div>
                     </div>
@@ -131,14 +180,73 @@
                     <i class="bi bi-printer"></i>
                     Print Log
                 </button>
-                <button type="button" class="btn btn-primary icon-btn" onclick="refreshCurrentLog()">
-                    <i class="bi bi-arrow-clockwise"></i>
-                    Refresh
-                </button>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Add spinner styles -->
+<style>
+    /* Log Loading Spinner Styles */
+    .log-loading-spinner {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 200px;
+        width: 100%;
+    }
+
+    .log-loading-spinner .spinner-border {
+        width: 3rem;
+        height: 3rem;
+        border-width: 0.25rem;
+    }
+
+    .log-loading-spinner p {
+        margin-top: 1rem;
+        font-size: 1rem;
+        color: #6c757d;
+    }
+
+    /* Animation for the loading spinner */
+    @keyframes pulse-opacity {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+
+    .log-loading-spinner .spinner-border {
+        animation: spinner-border 0.75s linear infinite, pulse-opacity 2s ease-in-out infinite;
+    }
+
+    /* Auto-refresh indicator styles */
+    .auto-refresh-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-right: 1rem;
+        font-size: 0.75rem;
+    }
+
+    .auto-refresh-indicator .spinner-border {
+        width: 0.8rem;
+        height: 0.8rem;
+        border-width: 0.1rem;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .log-loading-spinner {
+            min-height: 150px;
+        }
+
+        .log-loading-spinner .spinner-border {
+            width: 2rem;
+            height: 2rem;
+        }
+    }
+</style>
 
 <script>
     let fullUserLogData = [];
@@ -149,85 +257,6 @@
     let fullDebugLogData = '';
     let logRefreshInterval = null;
 
-    function switchToUserLog() {
-        currentLogType = 'user';
-        document.getElementById('userLogContent').style.display = 'block';
-        document.getElementById('ffmpegLogContent').style.display = 'none';
-        document.getElementById('schedulerLogContent').style.display = 'none';
-        document.getElementById('debugLogContent').style.display = 'none';
-
-        document.getElementById('userLogBtn').classList.add('active');
-        document.getElementById('ffmpegLogBtn').classList.remove('active');
-        document.getElementById('schedulerLogBtn').classList.remove('active');
-        document.getElementById('debugLogBtn').classList.remove('active');
-
-        refreshCurrentLog();
-    }
-
-    function switchToFFmpegLog() {
-        currentLogType = 'ffmpeg';
-        document.getElementById('userLogContent').style.display = 'none';
-        document.getElementById('ffmpegLogContent').style.display = 'block';
-        document.getElementById('schedulerLogContent').style.display = 'none';
-        document.getElementById('debugLogContent').style.display = 'none';
-
-        document.getElementById('userLogBtn').classList.remove('active');
-        document.getElementById('ffmpegLogBtn').classList.add('active');
-        document.getElementById('schedulerLogBtn').classList.remove('active');
-        document.getElementById('debugLogBtn').classList.remove('active');
-
-        refreshCurrentLog();
-    }
-
-    function switchToSchedulerLog() {
-        currentLogType = 'scheduler';
-        document.getElementById('userLogContent').style.display = 'none';
-        document.getElementById('ffmpegLogContent').style.display = 'none';
-        document.getElementById('schedulerLogContent').style.display = 'block';
-        document.getElementById('debugLogContent').style.display = 'none';
-
-        document.getElementById('userLogBtn').classList.remove('active');
-        document.getElementById('ffmpegLogBtn').classList.remove('active');
-        document.getElementById('schedulerLogBtn').classList.add('active');
-        document.getElementById('debugLogBtn').classList.remove('active');
-
-        refreshCurrentLog();
-    }
-
-    function switchToDebugLog() {
-        currentLogType = 'debug';
-        document.getElementById('userLogContent').style.display = 'none';
-        document.getElementById('ffmpegLogContent').style.display = 'none';
-        document.getElementById('schedulerLogContent').style.display = 'none';
-        // Add this line
-        document.getElementById('streamLogContent').style.display = 'none';
-        document.getElementById('debugLogContent').style.display = 'block';
-
-        document.getElementById('userLogBtn').classList.remove('active');
-        document.getElementById('ffmpegLogBtn').classList.remove('active');
-        document.getElementById('schedulerLogBtn').classList.remove('active');
-        // Add this line
-        document.getElementById('streamLogBtn').classList.remove('active');
-        document.getElementById('debugLogBtn').classList.add('active');
-
-        refreshCurrentLog();
-    }
-
-    function switchToDebugLog() {
-        currentLogType = 'debug';
-        document.getElementById('userLogContent').style.display = 'none';
-        document.getElementById('ffmpegLogContent').style.display = 'none';
-        document.getElementById('schedulerLogContent').style.display = 'none';
-        document.getElementById('debugLogContent').style.display = 'block';
-
-        document.getElementById('userLogBtn').classList.remove('active');
-        document.getElementById('ffmpegLogBtn').classList.remove('active');
-        document.getElementById('schedulerLogBtn').classList.remove('active');
-        document.getElementById('debugLogBtn').classList.add('active');
-
-        refreshCurrentLog();
-    }
-
     // Function to refresh the current active log tab
     function refreshCurrentLog() {
         // Find which tab is active
@@ -236,106 +265,294 @@
 
         const tabId = activeTab.id;
 
+        // Show loading spinner for the active tab
         if (tabId === 'userLogTab') {
+            const tableBody = document.getElementById('activityLogTableBody');
+            if (tableBody) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center">
+                            <div class="log-loading-spinner">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading user activity logs...</span>
+                                </div>
+                                <p class="mt-2">Loading user activity logs...</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
             refreshUserLog();
         } else if (tabId === 'ffmpegLogTab') {
+            const preElement = document.querySelector('.ffmpeg-log-pre');
+            if (preElement) {
+                preElement.innerHTML = `
+                    <div class="log-loading-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading FFmpeg logs...</span>
+                        </div>
+                        <p class="mt-2">Loading FFmpeg logs...</p>
+                    </div>
+                `;
+            }
             refreshFFmpegLog();
         } else if (tabId === 'schedulerLogTab') {
+            const preElement = document.querySelector('.scheduler-log-pre');
+            if (preElement) {
+                preElement.innerHTML = `
+                    <div class="log-loading-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading scheduler logs...</span>
+                        </div>
+                        <p class="mt-2">Loading scheduler logs...</p>
+                    </div>
+                `;
+            }
             refreshSchedulerLog();
         } else if (tabId === 'schedulerLogFileTab') {
+            const preElement = document.querySelector('.scheduler-log-file-pre');
+            if (preElement) {
+                preElement.innerHTML = `
+                    <div class="log-loading-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading scheduler log file...</span>
+                        </div>
+                        <p class="mt-2">Loading scheduler log file...</p>
+                    </div>
+                `;
+            }
             refreshSchedulerLogFile();
         } else if (tabId === 'streamLogTab') {
+            const preElement = document.querySelector('.stream-log-pre');
+            if (preElement) {
+                preElement.innerHTML = `
+                    <div class="log-loading-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading stream check logs...</span>
+                        </div>
+                        <p class="mt-2">Loading stream check logs...</p>
+                    </div>
+                `;
+            }
             refreshStreamLog();
         } else if (tabId === 'debugLogTab') {
+            const preElement = document.querySelector('.debug-log-pre');
+            if (preElement) {
+                preElement.innerHTML = `
+                    <div class="log-loading-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading debug logs...</span>
+                        </div>
+                        <p class="mt-2">Loading debug logs...</p>
+                    </div>
+                `;
+            }
             refreshDebugLog();
         }
     }
 
+    function updateUserLogDisplay() {
+        const tbody = document.getElementById('activityLogTableBody');
+        tbody.innerHTML = '';
+
+        if (!fullUserLogData || fullUserLogData.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center">
+                        <i class="bi bi-info-circle me-2"></i>
+                        No activity log entries found.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        fullUserLogData.forEach(activity => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${activity.timestamp}</td>
+                <td>${activity.username}</td>
+                <td>${activity.action}</td>
+                <td>${activity.filename || ''}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
     function refreshUserLog() {
         fetch('get_log_entries.php')
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 fullUserLogData = data.activities;
                 updateUserLogDisplay();
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                const tableBody = document.getElementById('activityLogTableBody');
+                if (tableBody) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="text-center text-danger">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                Error loading log: ${error.message}
+                                <button class="btn btn-sm btn-outline-primary ms-3" onclick="refreshUserLog()">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Retry
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }
+            });
     }
 
     function refreshFFmpegLog() {
         fetch('get_ffmpeg_log.php')
-            .then(response => response.text())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                return response.text();
+            })
             .then(data => {
                 fullFFmpegLogData = data;
                 document.querySelector('.ffmpeg-log-pre').textContent = data;
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                const preElement = document.querySelector('.ffmpeg-log-pre');
+                if (preElement) {
+                    preElement.innerHTML = `
+                        <div class="alert alert-danger">
+                            <h5><i class="bi bi-exclamation-triangle-fill me-2"></i>Error Loading Log</h5>
+                            <p>${error.message || 'The server did not respond.'}</p>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="refreshFFmpegLog()">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Retry
+                            </button>
+                        </div>
+                    `;
+                }
+            });
     }
 
     function refreshSchedulerLog() {
         fetch('get_scheduler_log.php')
-            .then(response => response.text())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                return response.text();
+            })
             .then(data => {
                 fullSchedulerLogData = data;
                 document.querySelector('.scheduler-log-pre').textContent = data;
             })
             .catch(error => {
                 console.error('Error:', error);
-                document.querySelector('.scheduler-log-pre').textContent = 'Error loading scheduler log: ' + error.message;
+                const preElement = document.querySelector('.scheduler-log-pre');
+                if (preElement) {
+                    preElement.innerHTML = `
+                        <div class="alert alert-danger">
+                            <h5><i class="bi bi-exclamation-triangle-fill me-2"></i>Error Loading Log</h5>
+                            <p>${error.message || 'The server did not respond.'}</p>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="refreshSchedulerLog()">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Retry
+                            </button>
+                        </div>
+                    `;
+                }
             });
     }
 
     function refreshSchedulerLogFile() {
         fetch('get_scheduler_log_file.php')
-            .then(response => response.text())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                return response.text();
+            })
             .then(data => {
                 fullSchedulerLogFileData = data;
                 document.querySelector('.scheduler-log-file-pre').textContent = data;
             })
             .catch(error => {
                 console.error('Error:', error);
-                document.querySelector('.scheduler-log-file-pre').textContent = 'Error loading scheduler log file: ' + error.message;
+                const preElement = document.querySelector('.scheduler-log-file-pre');
+                if (preElement) {
+                    preElement.innerHTML = `
+                        <div class="alert alert-danger">
+                            <h5><i class="bi bi-exclamation-triangle-fill me-2"></i>Error Loading Log</h5>
+                            <p>${error.message || 'The server did not respond.'}</p>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="refreshSchedulerLogFile()">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Retry
+                            </button>
+                        </div>
+                    `;
+                }
             });
     }
 
     function refreshStreamLog() {
         fetch('get_stream_url_check_log.php')
-            .then(response => response.text())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                return response.text();
+            })
             .then(data => {
                 fullStreamLogData = data;
                 document.querySelector('.stream-log-pre').textContent = data;
             })
             .catch(error => {
                 console.error('Error:', error);
-                document.querySelector('.stream-log-pre').textContent = 'Error loading stream URL check log: ' + error.message;
+                const preElement = document.querySelector('.stream-log-pre');
+                if (preElement) {
+                    preElement.innerHTML = `
+                        <div class="alert alert-danger">
+                            <h5><i class="bi bi-exclamation-triangle-fill me-2"></i>Error Loading Log</h5>
+                            <p>${error.message || 'The server did not respond.'}</p>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="refreshStreamLog()">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Retry
+                            </button>
+                        </div>
+                    `;
+                }
             });
     }
 
     function refreshDebugLog() {
         fetch('get_debug_log.php')
-            .then(response => response.text())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                return response.text();
+            })
             .then(data => {
                 fullDebugLogData = data;
                 document.querySelector('.debug-log-pre').textContent = data;
             })
             .catch(error => {
                 console.error('Error:', error);
-                document.querySelector('.debug-log-pre').textContent = 'Error loading debug log: ' + error.message;
+                const preElement = document.querySelector('.debug-log-pre');
+                if (preElement) {
+                    preElement.innerHTML = `
+                        <div class="alert alert-danger">
+                            <h5><i class="bi bi-exclamation-triangle-fill me-2"></i>Error Loading Log</h5>
+                            <p>${error.message || 'The server did not respond.'}</p>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="refreshDebugLog()">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Retry
+                            </button>
+                        </div>
+                    `;
+                }
             });
-    }
-
-    function updateUserLogDisplay() {
-        const tbody = document.getElementById('activityLogTableBody');
-        tbody.innerHTML = '';
-        fullUserLogData.forEach(activity => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-            <td>${activity.timestamp}</td>
-            <td>${activity.username}</td>
-            <td>${activity.action}</td>
-            <td>${activity.filename || ''}</td>
-        `;
-            tbody.appendChild(row);
-        });
     }
 
     function printLog() {
@@ -344,6 +561,19 @@
         if (!activeTab) return;
 
         const tabId = activeTab.id;
+
+        // Show loading state on the print button
+        const printButton = document.querySelector('button[onclick="printLog()"]');
+        if (printButton) {
+            const originalContent = printButton.innerHTML;
+            printButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Preparing...';
+            printButton.disabled = true;
+
+            setTimeout(() => {
+                printButton.innerHTML = originalContent;
+                printButton.disabled = false;
+            }, 1500);
+        }
 
         try {
             switch (tabId) {
@@ -435,15 +665,9 @@
                 // Prevent body scrolling
                 document.body.style.overflow = 'hidden';
 
-                // Optionally, focus the first log tab for keyboard users
-                const firstTab = document.querySelector('#logTabs .nav-link.active');
-                if (firstTab) {
-                    firstTab.focus();
-                }
-
                 // Start auto-refresh
                 refreshCurrentLog();
-                logRefreshInterval = setInterval(refreshCurrentLog, 5000);
+                logRefreshInterval = setInterval(refreshCurrentLog, 30000); // Refresh every 30 seconds
             });
 
             // Clear auto-refresh when modal is hidden
@@ -453,12 +677,6 @@
 
                 if (logRefreshInterval) {
                     clearInterval(logRefreshInterval);
-                }
-
-                // Optional: Return focus to the triggering element
-                const triggerElement = document.querySelector('[data-bs-target="#activityLogModal"]');
-                if (triggerElement) {
-                    triggerElement.focus();
                 }
             });
         }
