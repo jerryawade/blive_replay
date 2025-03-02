@@ -83,7 +83,7 @@ function debug_log($message)
     // Write to PHP error log
     error_log($message);
     // Write to local file
-    $logFile = 'debug.log';
+    $logFile = 'logs/debug.log';
     $timestamp = date('Y-m-d H:i:s');
     file_put_contents($logFile, "[$timestamp] $message\n", FILE_APPEND);
 }
@@ -234,14 +234,14 @@ function isAuthenticated()
 // Initialize scheduler files if admin and scheduler is enabled
 if (isAdmin() && isset($settings['enable_scheduler']) && $settings['enable_scheduler']) {
     // Create schedules file if it doesn't exist
-    $schedulesFile = 'recording_schedules.json';
+    $schedulesFile = 'json/recording_schedules.json';
     if (!file_exists($schedulesFile)) {
         file_put_contents($schedulesFile, json_encode([]));
         chmod($schedulesFile, 0644);
     }
 
     // Create scheduler state file if it doesn't exist
-    $schedulerStateFile = 'scheduler_state.json';
+    $schedulerStateFile = 'json/scheduler_state.json';
     if (!file_exists($schedulerStateFile)) {
         file_put_contents($schedulerStateFile, json_encode([
             'last_action' => null,
@@ -354,7 +354,7 @@ if (isAdmin()) {
         // Add this code block after the startRecording call
         if ($result['success']) {
             // Update scheduler state to indicate this is a manual recording
-            $schedulerStateFile = 'scheduler_state.json';
+            $schedulerStateFile = 'json/scheduler_state.json';
 
             if (file_exists($schedulerStateFile)) {
                 $state = json_decode(file_get_contents($schedulerStateFile), true) ?: [];
@@ -386,7 +386,7 @@ if (isAdmin()) {
         // Add this code block after the stopRecording call
         if ($result['success']) {
             // Update scheduler state
-            $schedulerStateFile = 'scheduler_state.json';
+            $schedulerStateFile = 'json/scheduler_state.json';
 
             if (file_exists($schedulerStateFile)) {
                 $state = json_decode(file_get_contents($schedulerStateFile), true) ?: [];
@@ -413,7 +413,7 @@ if (isAdmin()) {
         $fileToDelete = $_GET['delete'];
         if (strpos($fileToDelete, $recordingsDir) === 0 && file_exists($fileToDelete)) {
             // Remove note for this file
-            $notesFile = 'recording_notes.json';
+            $notesFile = 'json/recording_notes.json';
             if (file_exists($notesFile)) {
                 $notes = json_decode(file_get_contents($notesFile), true) ?? [];
                 $baseFileName = basename($fileToDelete);

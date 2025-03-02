@@ -8,14 +8,14 @@
 class UserManager
 {
     // File path for storing user data in JSON format
-    private string $usersFile = 'users.json';
+    private string $usersFile = 'json/users.json';
 
     // Constants for roles
     public const ROLE_ADMIN = 'admin';
     public const ROLE_VIEWER = 'viewer';
 
     // Storage for remember-me tokens
-    private string $tokensFile = 'remember_tokens.json';
+    private string $tokensFile = 'json/remember_tokens.json';
 
     // Password requirements
     private int $minPasswordLength = 8;
@@ -648,7 +648,7 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                 <div class="modal-body" style="min-height: 500px;">
                     <!-- Hidden field to store selected username -->
                     <input type="hidden" id="graphModalUsername" value="">
-
+                    
                     <!-- React component will be rendered here -->
                     <div id="usageGraphContainer"></div>
                 </div>
@@ -898,26 +898,26 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
 
             // Set up the button to view usage graphs
             const viewUsageGraphBtn = document.getElementById('viewUsageGraphBtn');
-
+            
             if (viewUsageGraphBtn) {
                 viewUsageGraphBtn.addEventListener('click', function() {
                     // Get the first user in the table or default to the current user
                     const userRows = document.querySelectorAll('#usersModal table tbody tr');
                     let username = '<?php echo htmlspecialchars($currentUsername); ?>';
-
+                    
                     if (userRows.length > 0) {
                         username = userRows[0].dataset.username || username;
                     }
-
+                    
                     // Set the username in the hidden field
                     document.getElementById('graphModalUsername').value = username;
-
+                    
                     // Show the graph modal
                     const graphModal = new bootstrap.Modal(document.getElementById('usageGraphModal'));
                     graphModal.show();
                 });
             }
-
+            
             // When the graph modal is shown, render the React component
             const usageGraphModal = document.getElementById('usageGraphModal');
             if (usageGraphModal) {
@@ -925,7 +925,7 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                     // Prevent body scrolling
                     document.body.style.overflow = 'hidden';
                 });
-
+                
                 // Restore body scrolling when modal is hidden
                 usageGraphModal.addEventListener('hidden.bs.modal', function() {
                     document.body.style.overflow = '';

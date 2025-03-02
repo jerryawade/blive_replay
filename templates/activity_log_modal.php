@@ -152,7 +152,7 @@
                                 </pre>
                             </div>
                         </div>
-
+                        
                         <!-- Debug Log Content -->
                         <div class="tab-pane fade" id="debugLogContent" role="tabpanel"
                              style="height: 100%; overflow-y: auto; overflow-x: hidden;">
@@ -187,65 +187,65 @@
 
 <!-- Add spinner styles -->
 <style>
-    /* Log Loading Spinner Styles */
+/* Log Loading Spinner Styles */
+.log-loading-spinner {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    width: 100%;
+}
+
+.log-loading-spinner .spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.25rem;
+}
+
+.log-loading-spinner p {
+    margin-top: 1rem;
+    font-size: 1rem;
+    color: #6c757d;
+}
+
+/* Animation for the loading spinner */
+@keyframes pulse-opacity {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.log-loading-spinner .spinner-border {
+    animation: spinner-border 0.75s linear infinite, pulse-opacity 2s ease-in-out infinite;
+}
+
+/* Auto-refresh indicator styles */
+.auto-refresh-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-right: 1rem;
+    font-size: 0.75rem;
+}
+
+.auto-refresh-indicator .spinner-border {
+    width: 0.8rem;
+    height: 0.8rem;
+    border-width: 0.1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
     .log-loading-spinner {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        min-height: 200px;
-        width: 100%;
+        min-height: 150px;
     }
-
+    
     .log-loading-spinner .spinner-border {
-        width: 3rem;
-        height: 3rem;
-        border-width: 0.25rem;
+        width: 2rem;
+        height: 2rem;
     }
-
-    .log-loading-spinner p {
-        margin-top: 1rem;
-        font-size: 1rem;
-        color: #6c757d;
-    }
-
-    /* Animation for the loading spinner */
-    @keyframes pulse-opacity {
-        0% { opacity: 1; }
-        50% { opacity: 0.5; }
-        100% { opacity: 1; }
-    }
-
-    .log-loading-spinner .spinner-border {
-        animation: spinner-border 0.75s linear infinite, pulse-opacity 2s ease-in-out infinite;
-    }
-
-    /* Auto-refresh indicator styles */
-    .auto-refresh-indicator {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-right: 1rem;
-        font-size: 0.75rem;
-    }
-
-    .auto-refresh-indicator .spinner-border {
-        width: 0.8rem;
-        height: 0.8rem;
-        border-width: 0.1rem;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .log-loading-spinner {
-            min-height: 150px;
-        }
-
-        .log-loading-spinner .spinner-border {
-            width: 2rem;
-            height: 2rem;
-        }
-    }
+}
 </style>
 
 <script>
@@ -264,7 +264,7 @@
         if (!activeTab) return;
 
         const tabId = activeTab.id;
-
+        
         // Show loading spinner for the active tab
         if (tabId === 'userLogTab') {
             const tableBody = document.getElementById('activityLogTableBody');
@@ -354,7 +354,7 @@
     function updateUserLogDisplay() {
         const tbody = document.getElementById('activityLogTableBody');
         tbody.innerHTML = '';
-
+        
         if (!fullUserLogData || fullUserLogData.length === 0) {
             tbody.innerHTML = `
                 <tr>
@@ -366,7 +366,7 @@
             `;
             return;
         }
-
+        
         fullUserLogData.forEach(activity => {
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -561,14 +561,14 @@
         if (!activeTab) return;
 
         const tabId = activeTab.id;
-
+        
         // Show loading state on the print button
         const printButton = document.querySelector('button[onclick="printLog()"]');
         if (printButton) {
             const originalContent = printButton.innerHTML;
             printButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Preparing...';
             printButton.disabled = true;
-
+            
             setTimeout(() => {
                 printButton.innerHTML = originalContent;
                 printButton.disabled = false;
@@ -620,7 +620,7 @@
                         })
                         .catch(error => console.error('Error:', error));
                     break;
-
+                    
                 case 'streamLogTab':
                     fetch('get_stream_url_check_log.php')
                         .then(response => response.text())

@@ -3,7 +3,7 @@ require_once 'logging.php';
 
 class SettingsManager
 {
-    private $settingsFile = 'settings.json';
+    private $settingsFile = 'json/settings.json';
     private $defaultSettings = [
         'server_url' => 'http://yourdomain.com',
         'live_stream_url' => 'vlc://yourdomain.com',

@@ -13,7 +13,7 @@ $activityLogger = new ActivityLogger();
 
 // Log function for debugging
 function logError($message) {
-    error_log(date('Y-m-d H:i:s') . " - User Action Error: " . $message . "\n", 3, "user_actions_error.log");
+    error_log(date('Y-m-d H:i:s') . " - User Action Error: " . $message . "\n", 3, "logs/user_actions_error.log");
 }
 
 // Ensure user is admin

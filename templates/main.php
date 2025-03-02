@@ -2,7 +2,7 @@
 // Get recording note function
 function getRecordingNote($fileName)
 {
-    $notesFile = 'recording_notes.json';
+    $notesFile = 'json/recording_notes.json';
     if (file_exists($notesFile)) {
         $notes = json_decode(file_get_contents($notesFile), true) ?? [];
         $baseFileName = basename($fileName);

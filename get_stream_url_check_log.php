@@ -18,7 +18,7 @@ $settings = $settingsManager->getSettings();
 date_default_timezone_set($settings['timezone'] ?? 'America/Chicago');
 
 // Stream URL check log file path
-$logFile = 'stream_url_check.log';
+$logFile = 'logs/stream_url_check.log';
 
 // Check if file exists
 if (!file_exists($logFile)) {

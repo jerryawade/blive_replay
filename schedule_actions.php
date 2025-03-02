@@ -37,7 +37,7 @@ if (!isset($_SESSION['authenticated']) || $_SESSION['authenticated'] !== true ||
  */
 class ScheduleManager {
     // File to store schedules
-    private $schedulesFile = 'recording_schedules.json';
+    private $schedulesFile = 'json/recording_schedules.json';
     private $activityLogger;
 
     /**

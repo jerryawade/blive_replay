@@ -19,8 +19,8 @@ function getContentHash() {
     $hash .= 'recording:' . (file_exists('ffmpeg_pid.txt') ? '1' : '0');
 
     // Add notes file modification time if it exists
-    if (file_exists('recording_notes.json')) {
-        $hash .= filemtime('recording_notes.json');
+    if (file_exists('json/recording_notes.json')) {
+        $hash .= filemtime('json/recording_notes.json');
     }
 
     return md5($hash);

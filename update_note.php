@@ -28,7 +28,7 @@ if (!isset($_POST['recording_file']) || !isset($_POST['note'])) {
 
 $recordingFile = $_POST['recording_file'];
 $note = trim($_POST['note']);
-$notesFile = 'recording_notes.json';
+$notesFile = 'json/recording_notes.json';
 
 try {
     // Load existing notes

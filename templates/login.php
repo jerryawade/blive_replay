@@ -68,9 +68,9 @@ if (isset($_POST['login']) && !$rateLimited) {
                 Sign In
             </h4>
 
-            <?php if (file_exists('users.json')): ?>
+            <?php if (file_exists('json/users.json')): ?>
                 <?php
-                $usersJson = file_get_contents('users.json');
+                $usersJson = file_get_contents('json/users.json');
                 $users = json_decode($usersJson, true);
                 if (isset($users['admin']) && isset($users['admin']['is_default']) && $users['admin']['is_default'] === true):
                     ?>

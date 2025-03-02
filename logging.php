@@ -1,8 +1,8 @@
 <?php
 class ActivityLogger {
-    private $logFile = 'user_activity.log';
+    private $logFile = 'logs/user_activity.log';
     private $maxLogSize = 5242880; // 5MB
-    private $retentionDays = 14;
+    private $retentionDays = 360;
 
     public function logActivity($username, $action, $filename = '', $timestamp = null) {
         // If no timestamp is provided, create one

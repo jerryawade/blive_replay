@@ -18,7 +18,7 @@ $settings = $settingsManager->getSettings();
 date_default_timezone_set($settings['timezone'] ?? 'America/Chicago');
 
 // Path to scheduler log file
-$logFile = 'scheduler.log';
+$logFile = 'logs/scheduler.log';
 
 // Check if log file exists
 if (!file_exists($logFile)) {

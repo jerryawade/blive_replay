@@ -19,7 +19,7 @@ $settings = $settingsManager->getSettings();
 date_default_timezone_set($settings['timezone'] ?? 'America/Chicago');
 
 // Debug log file path
-$debugLogFile = 'debug.log';
+$debugLogFile = 'logs/debug.log';
 
 // Check if file exists
 if (!file_exists($debugLogFile)) {

@@ -79,17 +79,17 @@ foreach ($usernames as $username) {
 // Count activities for each user
 foreach ($allActivities as $activity) {
     // Skip if username not in our list or activity type not relevant
-    if (!isset($userData[$activity['username']]) ||
+    if (!isset($userData[$activity['username']]) || 
         ($activity['action'] !== 'played_vlc' && $activity['action'] !== 'livestream_click')) {
         continue;
     }
-
+    
     // Check if within time range
     $activityDate = new DateTime($activity['timestamp']);
     if ($activityDate < $cutoffDate) {
         continue;
     }
-
+    
     // Increment the appropriate count
     $userData[$activity['username']][$activity['action']]++;
 }
@@ -109,8 +109,8 @@ foreach ($usernames as $index => $username) {
 // Sort users by total activity
 array_multisort(
     $totalActivity, SORT_DESC,
-    $usernames,
-    $videoPlays,
+    $usernames, 
+    $videoPlays, 
     $livestreamViews
 );
 

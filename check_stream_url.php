@@ -18,16 +18,40 @@ if (!isset($_SESSION['authenticated']) || $_SESSION['authenticated'] !== true ||
 require_once 'settings.php';
 require_once 'logging.php';
 
-// Get settings for timezone
-$settingsManager = new SettingsManager();
-$settings = $settingsManager->getSettings();
-
-// Set timezone from settings
-date_default_timezone_set($settings['timezone'] ?? 'America/Chicago');
-
 // Log file configuration
-$logFile = 'stream_url_check.log';
-$maxLogSize = 5 * 1024 * 1024; // 5 MB
+$logFile = 'logs/stream_url_check.log';
+$maxLogSize = 1 * 1024 * 1024; // 1 MB
+$maxLogLines = 5000; // Maximum number of log lines to keep
+
+/**
+ * Truncate log file if it exceeds the maximum number of lines
+ */
+function truncateLog($logFile, $maxLines = 5000) {
+    if (!file_exists($logFile)) return false;
+
+    $lines = file($logFile);
+    $totalLines = count($lines);
+
+    if ($totalLines <= $maxLines) return false;
+
+    // Calculate how many lines to remove (keep the newest entries)
+    $linesToKeep = $maxLines;
+    $linesToRemove = $totalLines - $linesToKeep;
+
+    // Keep only the most recent lines
+    $lines = array_slice($lines, $linesToRemove);
+
+    // Write the truncated content back to the file
+    $result = file_put_contents($logFile, implode('', $lines));
+
+    if ($result !== false) {
+        $linesRemoved = $totalLines - $linesToKeep;
+        debug_log("Truncated log file, removed {$linesRemoved} oldest entries", $logFile, $GLOBALS['maxLogSize'], 'info');
+        return true;
+    }
+
+    return false;
+}
 
 /**
  * Rotate log file if it exceeds maximum size
@@ -40,22 +64,83 @@ function rotateLogFile($logFile, $maxLogSize) {
 }
 
 /**
- * Debug logging function with log rotation
+ * Clean up old stream check log backup files
  */
-function debug_log($message, $logFile, $maxLogSize) {
-    // Rotate log file before writing
-    rotateLogFile($logFile, $maxLogSize);
+function cleanOldStreamCheckLogs($directory = 'logs', $baseLogFile = 'stream_url_check.log', $retentionDays = 7) {
+    // Get all backup files matching the pattern
+    $files = glob("{$directory}/{$baseLogFile}.*");
+    $cutoffTime = time() - ($retentionDays * 86400);
+
+    $removedCount = 0;
+    foreach ($files as $file) {
+        // Extract timestamp from filename or use file modification time
+        $fileTime = filemtime($file);
+
+        if ($fileTime < $cutoffTime) {
+            if (unlink($file)) {
+                $removedCount++;
+            }
+        }
+    }
+
+    // Log the cleanup operation
+    if ($removedCount > 0) {
+        debug_log("Cleaned up {$removedCount} old stream check log backup files", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'info');
+    }
+
+    return $removedCount;
+}
+
+/**
+ * Debug logging function with log rotation and log levels
+ * @param string $message Message to log
+ * @param string $logFile Log file path
+ * @param int $maxLogSize Maximum log file size before rotation
+ * @param string $level Log level (info, warning, error)
+ */
+function debug_log($message, $logFile, $maxLogSize, $level = 'info') {
+    // Only log warnings and errors by default
+    // Change this condition to control verbosity
+    $shouldLog = ($level === 'error' || $level === 'warning');
+
+    // Always log in verbose mode (you can add a config option for this)
+    $verboseLogging = true; // Set to false to reduce logging
+    if ($verboseLogging) {
+        $shouldLog = true;
+    }
+
+    if (!$shouldLog) return;
+
+    // Make sure the directory exists
+    $logDir = dirname($logFile);
+    if (!is_dir($logDir)) {
+        mkdir($logDir, 0755, true);
+    }
 
     $timestamp = date('Y-m-d H:i:s');
-    file_put_contents($logFile, "[$timestamp] $message\n", FILE_APPEND);
-    error_log("[Stream URL Check] $message");
+    $levelUpper = strtoupper($level);
+    file_put_contents($logFile, "[$timestamp] [$levelUpper] $message\n", FILE_APPEND);
+
+    // Also log to PHP error log for critical issues
+    if ($level === 'error') {
+        error_log("[Stream URL Check] $message");
+    }
 }
+
+// Truncate log if it has too many lines
+truncateLog($logFile, $maxLogLines);
+
+// Rotate log file if it exceeds maximum size
+rotateLogFile($logFile, $maxLogSize);
+
+// Clean up old log files
+cleanOldStreamCheckLogs('logs', basename($logFile), 7);
 
 /**
  * Validate Video Stream
  */
 function validateVideoStream($url) {
-    debug_log("Validating video stream for: $url", $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
+    debug_log("Validating video stream for: $url", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'info');
 
     // Validation methods
     $validationMethods = [
@@ -68,9 +153,8 @@ function validateVideoStream($url) {
 
             exec($infoCommand, $output, $returnVal);
 
-            debug_log("Stream Info Command: $infoCommand", $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
-            debug_log("Stream Info Output: " . implode("\n", $output), $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
-            debug_log("Stream Info Return Value: $returnVal", $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
+            debug_log("Stream Info Command: $infoCommand", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'debug');
+            debug_log("Stream Info Return Value: $returnVal", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'debug');
 
             if ($returnVal === 0) {
                 $streamInfo = json_decode(implode("\n", $output), true);
@@ -82,6 +166,7 @@ function validateVideoStream($url) {
                     });
 
                     if (!empty($videoStreams)) {
+                        debug_log("Method 1: Video stream detected successfully", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'info');
                         return [
                             'success' => true,
                             'message' => 'Video stream detected',
@@ -91,6 +176,7 @@ function validateVideoStream($url) {
                 }
             }
 
+            debug_log("Method 1: No video stream detected", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'warning');
             return ['success' => false, 'message' => 'No video stream detected in stream info'];
         },
 
@@ -111,9 +197,8 @@ function validateVideoStream($url) {
 
             exec($captureCommand, $output, $returnVal);
 
-            debug_log("Frame Capture Command: $captureCommand", $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
-            debug_log("Frame Capture Output: " . implode("\n", $output), $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
-            debug_log("Frame Capture Return Value: $returnVal", $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
+            debug_log("Frame Capture Command: $captureCommand", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'debug');
+            debug_log("Frame Capture Return Value: $returnVal", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'debug');
 
             // Check if frame was captured successfully
             if ($returnVal === 0 && file_exists($tempFrame) && filesize($tempFrame) > 0) {
@@ -123,11 +208,14 @@ function validateVideoStream($url) {
                     'frame_size' => filesize($tempFrame)
                 ];
 
+                debug_log("Method 2: Video frame captured successfully", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'info');
+
                 // Clean up temp frame
                 unlink($tempFrame);
                 return $result;
             }
 
+            debug_log("Method 2: Failed to capture video frame", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'warning');
             return ['success' => false, 'message' => 'Failed to capture video frame'];
         },
 
@@ -140,14 +228,14 @@ function validateVideoStream($url) {
 
             exec($durationCommand, $output, $returnVal);
 
-            debug_log("Duration Check Command: $durationCommand", $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
-            debug_log("Duration Check Output: " . implode("\n", $output), $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
-            debug_log("Duration Check Return Value: $returnVal", $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
+            debug_log("Duration Check Command: $durationCommand", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'debug');
+            debug_log("Duration Check Return Value: $returnVal", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'debug');
 
             if ($returnVal === 0 && !empty($output)) {
                 $duration = floatval(trim($output[0]));
 
                 if ($duration > 0) {
+                    debug_log("Method 3: Video duration detected: $duration seconds", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'info');
                     return [
                         'success' => true,
                         'message' => "Video stream duration detected: $duration seconds",
@@ -156,6 +244,7 @@ function validateVideoStream($url) {
                 }
             }
 
+            debug_log("Method 3: Unable to detect stream duration", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'warning');
             return ['success' => false, 'message' => 'Unable to detect stream duration'];
         }
     ];
@@ -165,12 +254,12 @@ function validateVideoStream($url) {
         $result = $method();
 
         if ($result['success']) {
-            debug_log("Video stream validation successful: " . $result['message'], $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
+            debug_log("Video stream validation successful: " . $result['message'], $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'info');
             return $result;
         }
     }
 
-    debug_log("All video stream validation methods failed", $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
+    debug_log("All video stream validation methods failed", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'error');
     return [
         'success' => false,
         'message' => 'No active video stream detected'
@@ -184,7 +273,7 @@ $streamUrl = $settings['srt_url'] ?? '';
 
 // Validate input
 if (empty($streamUrl)) {
-    debug_log("No stream URL configured", $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
+    debug_log("No stream URL configured", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'error');
     echo json_encode([
         'success' => false,
         'active' => false,
@@ -195,7 +284,7 @@ if (empty($streamUrl)) {
 
 // Actual validation execution
 try {
-    debug_log("Starting video stream validation", $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
+    debug_log("Starting video stream validation", $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'info');
     $streamCheck = validateVideoStream($streamUrl);
 
     $result = [
@@ -207,7 +296,7 @@ try {
 
     echo json_encode($result);
 } catch (Exception $e) {
-    debug_log("Exception during validation: " . $e->getMessage(), $GLOBALS['logFile'], $GLOBALS['maxLogSize']);
+    debug_log("Exception during validation: " . $e->getMessage(), $GLOBALS['logFile'], $GLOBALS['maxLogSize'], 'error');
     echo json_encode([
         'success' => false,
         'active' => false,

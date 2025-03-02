@@ -24,9 +24,9 @@ require_once 'settings.php';
 class SchedulerService
 {
     // File paths
-    private $schedulesFile = 'recording_schedules.json';
-    private $schedulerLogFile = 'scheduler.log';
-    private $schedulerStateFile = 'scheduler_state.json';
+    private $schedulesFile = 'json/recording_schedules.json';
+    private $schedulerLogFile = 'logs/scheduler.log';
+    private $schedulerStateFile = 'json/scheduler_state.json';
 
     // Service dependencies
     private $ffmpegService;
@@ -139,7 +139,7 @@ class SchedulerService
             } else {
                 $this->log("Failed to start recording: " . ($result['message'] ?? 'Unknown error'));
             }
-        }
+        } 
         // Check if we need to stop a recording started by the scheduler
         // Only if no active schedule is found AND the current recording was started by the scheduler
         else if (!$activeScheduleFound && $this->activeRecording && $startedByScheduler) {
@@ -163,7 +163,7 @@ class SchedulerService
             } else {
                 $this->log("Failed to stop recording: " . ($result['message'] ?? 'Unknown error'));
             }
-        }
+        } 
         // If already recording and should continue recording (under scheduler control)
         else if ($activeScheduleFound && $this->activeRecording && $startedByScheduler) {
             // Check if we switched to a different schedule

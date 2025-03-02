@@ -13,7 +13,7 @@ class FFmpegService
     private string $currentRecordingFile = 'current_recording.txt';
     private string $recordingStartFile = 'recording_start.txt';
     private string $lastChangeFile = 'last_change.txt';
-    private string $logFile = 'ffmpeg.log';
+    private string $logFile = 'logs/ffmpeg.log';
     
     // Directories
     private string $recordingsDir;
@@ -24,7 +24,7 @@ class FFmpegService
     {
         $this->recordingsDir = $recordingsDir;
         $this->thumbnailsDir = $thumbnailsDir;
-
+        
         // Ensure directories exist
         $this->ensureDirectoryExists($recordingsDir);
         $this->ensureDirectoryExists($thumbnailsDir);
