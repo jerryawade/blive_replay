@@ -29,19 +29,38 @@ class RecordingController {
 
     async checkRecordingStatus() {
         try {
-            const response = await fetch('recording_status.php');
-            const data = await response.json();
-            
-            // Update UI based on recording status
-            this.isRecording = data.recording_active;
-            this.updateUI(data);
-            
-            if (data.recording_active && data.recording_start) {
-                this.startTime = parseInt(data.recording_start);
+            const [recordingResponse, streamResponse] = await Promise.all([
+                fetch('recording_status.php'),
+                fetch('check_stream_url.php')
+            ]);
+
+            const recordingData = await recordingResponse.json();
+            const streamData = await streamResponse.json();
+
+            // Combine recording and stream data for UI update
+            const combinedData = {
+                ...recordingData,
+                stream_accessible: streamData.active,
+                stream_message: streamData.message
+            };
+
+            // Update UI with combined data
+            this.isRecording = recordingData.recording_active;
+            this.updateUI(combinedData);
+
+            if (recordingData.recording_active && recordingData.recording_start) {
+                this.startTime = parseInt(recordingData.recording_start);
                 this.startTimer();
             }
         } catch (error) {
-            console.error('Error checking recording status:', error);
+            console.error('Error checking recording and stream status:', error);
+
+            // Disable start button if there's an error checking the stream
+            const startButton = document.getElementById('startRecordingBtn');
+            if (startButton) {
+                startButton.disabled = true;
+                startButton.setAttribute('title', 'Unable to verify stream URL');
+            }
         }
     }
 
@@ -51,7 +70,21 @@ class RecordingController {
         const recordingStatus = document.getElementById('recordingStatus');
 
         if (startButton && stopButton) {
-            startButton.disabled = data.recording_active;
+            // Disable start button if:
+            // 1. Recording is already in progress, OR
+            // 2. Stream is not accessible
+            const shouldDisableStart = data.recording_active || !data.stream_accessible;
+            startButton.disabled = shouldDisableStart;
+
+            // Set appropriate tooltip
+            if (data.recording_active) {
+                startButton.setAttribute('title', 'Recording is already in progress');
+            } else if (!data.stream_accessible) {
+                startButton.setAttribute('title', data.stream_message || 'Stream URL is not accessible');
+            } else {
+                startButton.removeAttribute('title');
+            }
+
             stopButton.disabled = !data.recording_active;
         }
 
@@ -60,7 +93,6 @@ class RecordingController {
                 recordingStatus.classList.remove('recording-inactive');
                 recordingStatus.classList.add('recording-active');
 
-                // Add null check before updating text content
                 const statusText = recordingStatus.querySelector('.status-text');
                 if (statusText) {
                     statusText.textContent = 'Recording in Progress (DO NOT refresh your browser!)';
@@ -69,14 +101,16 @@ class RecordingController {
                 recordingStatus.classList.remove('recording-active');
                 recordingStatus.classList.add('recording-inactive');
 
-                // Add null check before updating text content
                 const statusText = recordingStatus.querySelector('.status-text');
                 if (statusText) {
-                    statusText.textContent = 'Recording Stopped';
+                    statusText.textContent = data.stream_accessible
+                        ? 'Recording Stopped'
+                        : 'Stream URL Not Accessible';
                 }
             }
         }
     }
+
     async startRecording() {
         try {
             const response = await fetch('recording_actions.php', {
@@ -86,26 +120,29 @@ class RecordingController {
                 },
                 body: 'action=start'
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 this.isRecording = true;
                 this.startTime = result.start_time;
                 this.startTimer();
-                this.updateUI({ recording_active: true, recording_start: result.start_time });
-                
-                // Show success message
+                this.updateUI({ recording_active: true, recording_start: result.start_time, stream_accessible: true });
+
                 this.showNotification('Recording started successfully', 'success');
-                
-                // Trigger update for all connected clients
                 this.triggerPageUpdate();
             } else {
                 this.showNotification('Failed to start recording: ' + result.message, 'error');
+
+                // Recheck status to update UI
+                this.checkRecordingStatus();
             }
         } catch (error) {
             console.error('Error starting recording:', error);
             this.showNotification('Error starting recording. Check console for details.', 'error');
+
+            // Recheck status to update UI
+            this.checkRecordingStatus();
         }
     }
 
@@ -113,7 +150,7 @@ class RecordingController {
         if (!confirm('Are you sure you want to stop the current recording?')) {
             return;
         }
-        
+
         try {
             const response = await fetch('recording_actions.php', {
                 method: 'POST',
@@ -122,43 +159,45 @@ class RecordingController {
                 },
                 body: 'action=stop'
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 this.isRecording = false;
                 this.stopTimer();
-                this.updateUI({ recording_active: false, recording_start: 0 });
-                
-                // Show success message
+
+                // Recheck status to update UI
+                this.checkRecordingStatus();
+
                 this.showNotification('Recording stopped successfully', 'success');
-                
-                // Trigger update for all connected clients
                 this.triggerPageUpdate();
             } else {
                 this.showNotification('Failed to stop recording: ' + result.message, 'error');
+
+                // Recheck status to update UI
+                this.checkRecordingStatus();
             }
         } catch (error) {
             console.error('Error stopping recording:', error);
             this.showNotification('Error stopping recording. Check console for details.', 'error');
+
+            // Recheck status to update UI
+            this.checkRecordingStatus();
         }
     }
 
     startTimer() {
         const timerElement = document.getElementById('recordingTimer');
         if (!timerElement) return;
-        
-        // Clear existing timer if any
+
         this.stopTimer();
-        
-        // Update timer display function
+
         const updateDisplay = () => {
             const now = Math.floor(Date.now() / 1000);
             const elapsed = now - this.startTime;
             timerElement.textContent = this.formatTime(elapsed);
         };
-        
-        // Update immediately and then every second
+
         updateDisplay();
         this.recordingTimer = setInterval(updateDisplay, 1000);
     }
@@ -178,21 +217,18 @@ class RecordingController {
     }
 
     showNotification(message, type = 'info') {
-        // Create notification element
         const notification = document.createElement('div');
         notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show fixed-top mx-auto mt-3`;
         notification.style.maxWidth = '500px';
         notification.style.zIndex = '9999';
-        
+
         notification.innerHTML = `
             ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         `;
-        
-        // Add to document
+
         document.body.appendChild(notification);
-        
-        // Auto-remove after 5 seconds
+
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.remove();
@@ -201,7 +237,6 @@ class RecordingController {
     }
 
     triggerPageUpdate() {
-        // Update the last_change.txt file timestamp via AJAX
         fetch('update_change_timestamp.php', { method: 'POST' })
             .catch(error => console.error('Error updating timestamp:', error));
     }
