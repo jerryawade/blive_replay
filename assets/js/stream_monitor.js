@@ -1,29 +1,42 @@
 /**
- * Asynchronous Stream Monitor
- * Provides non-blocking stream URL status checking
+ * Enhanced Stream Monitor
+ * Provides real-time monitoring of both primary and secondary stream URLs
  */
 class StreamMonitor {
     constructor() {
-        // Tracking properties
-        this.statusIndicator = null;
+        this.checkIntervalTime = 30000; // 30 seconds
+        this.primaryIndicator = null;
+        this.secondaryIndicator = null;
         this.checkInterval = null;
-        this.lastStatus = null;
+        this.lastPrimaryStatus = null;
+        this.lastSecondaryStatus = null;
         this.retryCount = 0;
-        this.consecutiveFailures = 0;
-        this.maxConsecutiveFailures = 3;
+        this.maxRetries = 3;
+        this.usingRedundant = false;
     }
 
-    /**
-     * Initialize the stream monitor
-     */
-    init() {
-        this.createStatusIndicator();
+    async init() {
+        try {
+            const response = await fetch('get_settings.php?key=use_redundant_recording');
+            const data = await response.json();
 
-        // Immediate first check
-        this.checkStatus();
+            this.usingRedundant = data.value === true || data.value === "true" || data.value === "1";
+            this.createStatusIndicators();
 
-        // Setup interval for periodic checks
-        this.checkInterval = setInterval(() => this.checkStatus(), 30000); // 30 seconds
+            // Immediate first check
+            await this.checkStatus();
+
+            // Setup interval for periodic checks
+            this.checkInterval = setInterval(() => this.checkStatus(), this.checkIntervalTime);
+        } catch (error) {
+            console.error('Error checking redundant recording setting:', error);
+            this.usingRedundant = false;
+            this.createStatusIndicators();
+
+            // Still setup monitoring
+            this.checkStatus();
+            this.checkInterval = setInterval(() => this.checkStatus(), this.checkIntervalTime);
+        }
 
         // Clean up on page unload
         window.addEventListener('beforeunload', () => {
@@ -33,43 +46,23 @@ class StreamMonitor {
         });
     }
 
-    /**
-     * Create compact status indicator
-     */
-    createStatusIndicator() {
-        // Reuse existing indicator if present
-        if (document.getElementById('stream-status-indicator')) {
-            this.statusIndicator = document.getElementById('stream-status-indicator');
-            return;
+    createStatusIndicators() {
+        // Create primary indicator
+        this.primaryIndicator = this.createIndicator('primary-stream-status', 'Primary Stream', 20);
+        document.body.appendChild(this.primaryIndicator);
+
+        // Create secondary indicator if using redundant
+        if (this.usingRedundant) {
+            this.secondaryIndicator = this.createIndicator('secondary-stream-status', 'Secondary Stream', 40);
+            document.body.appendChild(this.secondaryIndicator);
         }
 
-        // Create status indicator
-        this.statusIndicator = document.createElement('div');
-        this.statusIndicator.id = 'stream-status-indicator';
-        this.statusIndicator.title = 'Stream URL Status';
-        this.statusIndicator.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
-            background-color: gray;
-            z-index: 9999;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            cursor: help;
-        `;
-
-        // Add event listeners for tooltip
-        this.statusIndicator.addEventListener('mouseenter', () => this.showTooltip());
-        this.statusIndicator.addEventListener('mouseleave', () => this.hideTooltip());
-
-        // Create tooltip element
+        // Create tooltip
         const tooltip = document.createElement('div');
         tooltip.id = 'stream-status-tooltip';
         tooltip.style.cssText = `
             position: fixed;
-            bottom: 40px;
+            bottom: 60px;
             right: 20px;
             background-color: rgba(0,0,0,0.8);
             color: white;
@@ -82,29 +75,56 @@ class StreamMonitor {
             word-wrap: break-word;
         `;
         document.body.appendChild(tooltip);
-
-        document.body.appendChild(this.statusIndicator);
     }
 
-    /**
-     * Show tooltip with status details
-     */
-    showTooltip() {
+    createIndicator(id, title, bottomPosition) {
+        const indicator = document.createElement('div');
+        indicator.id = id;
+        indicator.title = title;
+        indicator.className = 'stream-status-indicator';
+        indicator.style.cssText = `
+            position: fixed;
+            bottom: ${bottomPosition}px;
+            right: 20px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: gray;
+            z-index: 9999;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            cursor: help;
+        `;
+
+        // Add tooltip events
+        indicator.addEventListener('mouseenter', () => this.showTooltip(id));
+        indicator.addEventListener('mouseleave', () => this.hideTooltip());
+
+        return indicator;
+    }
+
+    showTooltip(indicatorId) {
         const tooltip = document.getElementById('stream-status-tooltip');
         if (!tooltip) return;
 
-        const status = this.lastStatus;
-        if (status) {
-            tooltip.textContent = status.active
-                ? (status.message || 'Stream URL is accessible')
-                : (status.message || 'Stream URL is not accessible');
-            tooltip.style.display = 'block';
+        let content = '';
+        if (indicatorId === 'primary-stream-status') {
+            content = this.lastPrimaryStatus
+                ? `Primary Stream: ${this.lastPrimaryStatus.active
+                    ? (this.lastPrimaryStatus.message || 'Accessible')
+                    : (this.lastPrimaryStatus.message || 'Not accessible')}`
+                : 'Primary Stream: Checking...';
+        } else if (indicatorId === 'secondary-stream-status') {
+            content = this.lastSecondaryStatus
+                ? `Secondary Stream: ${this.lastSecondaryStatus.active
+                    ? (this.lastSecondaryStatus.message || 'Accessible')
+                    : (this.lastSecondaryStatus.message || 'Not accessible')}`
+                : 'Secondary Stream: Checking...';
         }
+
+        tooltip.textContent = content;
+        tooltip.style.display = 'block';
     }
 
-    /**
-     * Hide tooltip
-     */
     hideTooltip() {
         const tooltip = document.getElementById('stream-status-tooltip');
         if (tooltip) {
@@ -112,46 +132,47 @@ class StreamMonitor {
         }
     }
 
-    /**
-     * Update the status indicator
-     * @param {Object} status - Status information
-     */
-    updateStatusIndicator(status) {
-        if (!this.statusIndicator) return;
+    updateStatusIndicators(primaryStatus, secondaryStatus) {
+        if (!this.primaryIndicator) return;
 
-        // Update indicator color and title
-        if (status) {
-            if (status.active) {
-                // Green for active
-                this.statusIndicator.style.backgroundColor = '#28a745';
-                this.statusIndicator.title = status.message || 'Stream URL is accessible';
-                // Reset consecutive failures when active
-                this.consecutiveFailures = 0;
+        // Update primary indicator
+        if (primaryStatus) {
+            if (primaryStatus.active) {
+                this.primaryIndicator.style.backgroundColor = '#28a745';
+                this.primaryIndicator.title = primaryStatus.message || 'Primary stream is accessible';
             } else {
-                // Red for inactive
-                this.statusIndicator.style.backgroundColor = '#dc3545';
-                this.statusIndicator.title = status.message || 'Stream URL is not accessible';
-                // Track consecutive failures
-                this.consecutiveFailures++;
+                this.primaryIndicator.style.backgroundColor = '#dc3545';
+                this.primaryIndicator.title = primaryStatus.message || 'Primary stream is not accessible';
             }
         } else {
-            // Gray for checking
-            this.statusIndicator.style.backgroundColor = '#6c757d';
-            this.statusIndicator.title = 'Checking stream URL...';
+            this.primaryIndicator.style.backgroundColor = '#6c757d';
+            this.primaryIndicator.title = 'Checking primary stream...';
+        }
+
+        // Update secondary indicator if using redundant
+        if (this.usingRedundant && this.secondaryIndicator) {
+            if (secondaryStatus) {
+                if (secondaryStatus.active) {
+                    this.secondaryIndicator.style.backgroundColor = '#28a745';
+                    this.secondaryIndicator.title = secondaryStatus.message || 'Secondary stream is accessible';
+                } else {
+                    this.secondaryIndicator.style.backgroundColor = '#dc3545';
+                    this.secondaryIndicator.title = secondaryStatus.message || 'Secondary stream is not accessible';
+                }
+            } else {
+                this.secondaryIndicator.style.backgroundColor = '#6c757d';
+                this.secondaryIndicator.title = 'Checking secondary stream...';
+            }
         }
     }
 
-    /**
-     * Check stream URL status
-     * @param {boolean} verbose - Whether to provide verbose logging
-     */
-    async checkStatus(verbose = false) {
-        try {
-            // Update to checking state
-            this.updateStatusIndicator(null);
+    async checkStatus() {
+        // Update to checking state
+        this.updateStatusIndicators(null, null);
 
-            // Fetch with optional cache bypass
-            const response = await fetch(`check_stream_url.php${verbose ? '?bypass_cache=1' : ''}`, {
+        try {
+            // Fetch primary status
+            const primaryResponse = await fetch('check_stream_url.php?stream=primary', {
                 method: 'GET',
                 headers: {
                     'Cache-Control': 'no-cache',
@@ -159,56 +180,90 @@ class StreamMonitor {
                 }
             });
 
-            // Check response status
-            if (!response.ok) {
-                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            // Validate primary response
+            if (!primaryResponse.ok) {
+                throw new Error('Failed to fetch primary stream status');
             }
 
-            // Parse JSON response
-            const result = await response.json();
+            const primaryResult = await primaryResponse.json();
+            this.lastPrimaryStatus = primaryResult;
 
-            // Update last status and reset retry count
-            this.lastStatus = result;
-            this.retryCount = 0;
+            // Fetch secondary status if using redundant
+            let secondaryResult = null;
+            if (this.usingRedundant) {
+                try {
+                    const secondaryResponse = await fetch('check_stream_url.php?stream=secondary', {
+                        method: 'GET',
+                        headers: {
+                            'Cache-Control': 'no-cache',
+                            'Pragma': 'no-cache'
+                        }
+                    });
 
-            // Update status indicator
-            this.updateStatusIndicator(result);
+                    // Validate secondary response
+                    if (!secondaryResponse.ok) {
+                        throw new Error('Failed to fetch secondary stream status');
+                    }
 
-            // Special handling for repeated failures
-            if (this.consecutiveFailures >= this.maxConsecutiveFailures) {
-                console.warn(`Stream has failed ${this.consecutiveFailures} consecutive checks`);
-                // Potentially trigger an alert or take additional action
+                    secondaryResult = await secondaryResponse.json();
+                    this.lastSecondaryStatus = secondaryResult;
+                } catch (secondaryError) {
+                    console.error('Secondary stream check error:', secondaryError);
+                    this.lastSecondaryStatus = {
+                        active: false,
+                        message: 'Unable to check secondary stream'
+                    };
+                }
             }
 
-            return result;
+            // Update status indicators with independent results
+            this.updateStatusIndicators(primaryResult, secondaryResult);
+
+            return {
+                primary: primaryResult,
+                secondary: secondaryResult
+            };
 
         } catch (error) {
-            // Retry logic
-            this.retryCount++;
-            if (this.retryCount <= 3) {
-                const retryDelay = Math.min(1000 * Math.pow(2, this.retryCount), 30000);
+            console.error('Stream status check error:', error);
 
-                // Update status to show retry
-                this.updateStatusIndicator({
-                    active: false,
-                    message: `Connection error. Retrying (${this.retryCount}/3)...`
-                });
+            const errorResult = {
+                active: false,
+                message: 'Connection error checking stream'
+            };
 
-                // Schedule retry
-                await new Promise(resolve => setTimeout(resolve, retryDelay));
-                return this.checkStatus();
-            } else {
-                // Max retries reached
-                this.updateStatusIndicator({
-                    active: false,
-                    message: 'Unable to check stream URL status'
-                });
+            // Update indicators with error state
+            this.updateStatusIndicators(errorResult, this.usingRedundant ? errorResult : null);
 
-                return null;
-            }
+            return null;
         }
     }
 }
+
+// Add styles for the indicators
+const style = document.createElement('style');
+style.textContent = `
+    .stream-status-indicator {
+        transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .stream-status-indicator.pulse {
+        animation: pulse-animation 2s infinite;
+    }
+    
+    @keyframes pulse-animation {
+        0% {
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+        }
+    }
+`;
+document.head.appendChild(style);
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
