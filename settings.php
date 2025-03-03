@@ -8,6 +8,9 @@ class SettingsManager
         'server_url' => 'http://yourdomain.com',
         'live_stream_url' => 'vlc://yourdomain.com',
         'srt_url' => '',
+        'srt_url_secondary' => '',
+        'use_redundant_recording' => false,
+        'redundant_recording_strategy' => 'auto',
         'show_recordings' => true,
         'show_livestream' => true,
         'allow_vlc' => true,
@@ -152,6 +155,56 @@ function renderSettingsModal($settings)
                                                required>
                                     </div>
                                     <small class="text-muted">Example: srt://yourdomain.com:port if needed</small>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" class="form-check-input" id="use_redundant_recording"
+                                               name="use_redundant_recording"
+                                            <?php echo isset($settings['use_redundant_recording']) && $settings['use_redundant_recording'] ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="use_redundant_recording">
+                                            <i class="bi bi-shield-check me-2"></i>
+                                            Enable redundant recording (backup stream)
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3 redundant-stream-options"
+                                     style="<?php echo isset($settings['use_redundant_recording']) && $settings['use_redundant_recording'] ? '' : 'display: none;'; ?>">
+                                    <label for="srt_url_secondary" class="form-label">Secondary Recording URL</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="bi bi-record-circle"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="srt_url_secondary"
+                                               name="srt_url_secondary"
+                                               value="<?php echo htmlspecialchars($settings['srt_url_secondary'] ?? ''); ?>"
+                                               placeholder="e.g., srt://backup-server:port">
+                                    </div>
+                                    <small class="text-muted">Secondary/backup stream URL used as a redundant recording
+                                        source</small>
+                                </div>
+
+                                <div class="mb-3 redundant-stream-options"
+                                     style="<?php echo isset($settings['use_redundant_recording']) && $settings['use_redundant_recording'] ? '' : 'display: none;'; ?>">
+                                    <label for="redundant_recording_strategy" class="form-label">Redundancy
+                                        Strategy</label>
+                                    <select class="form-select" id="redundant_recording_strategy"
+                                            name="redundant_recording_strategy">
+                                        <option value="auto" <?php echo (!isset($settings['redundant_recording_strategy']) || $settings['redundant_recording_strategy'] === 'auto') ? 'selected' : ''; ?>>
+                                            Automatic (Select Best Quality)
+                                        </option>
+                                        <option value="primary" <?php echo (isset($settings['redundant_recording_strategy']) && $settings['redundant_recording_strategy'] === 'primary') ? 'selected' : ''; ?>>
+                                            Prefer Primary Stream
+                                        </option>
+                                        <option value="secondary" <?php echo (isset($settings['redundant_recording_strategy']) && $settings['redundant_recording_strategy'] === 'secondary') ? 'selected' : ''; ?>>
+                                            Prefer Secondary Stream
+                                        </option>
+                                        <option value="both" <?php echo (isset($settings['redundant_recording_strategy']) && $settings['redundant_recording_strategy'] === 'both') ? 'selected' : ''; ?>>
+                                            Keep Both Recordings
+                                        </option>
+                                    </select>
+                                    <small class="text-muted">How to handle redundant recordings when both
+                                        succeed</small>
                                 </div>
                                 <div class="mb-3">
                                     <label for="vlc_webpage_url" class="form-label">VLC Webpage URL</label>
@@ -303,6 +356,13 @@ function renderSettingsModal($settings)
 
         document.getElementById('settingsModal').addEventListener('hidden.bs.modal', function () {
             document.body.style.overflow = '';
+        });
+
+        document.getElementById('use_redundant_recording').addEventListener('change', function() {
+            const redundantOptions = document.querySelectorAll('.redundant-stream-options');
+            redundantOptions.forEach(element => {
+                element.style.display = this.checked ? 'block' : 'none';
+            });
         });
 
         // Function to show schedules modal after settings modal is closed
