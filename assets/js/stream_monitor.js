@@ -1,17 +1,14 @@
 /**
- * Aggressive Stream URL Monitor
- *
- * More frequent checks with multiple validation strategies
+ * Asynchronous Stream Monitor
+ * Provides non-blocking stream URL status checking
  */
 class StreamMonitor {
     constructor() {
-        // More frequent checks (every 1 minute)
-        this.checkIntervalTime = 60000;
+        // Tracking properties
         this.statusIndicator = null;
         this.checkInterval = null;
         this.lastStatus = null;
         this.retryCount = 0;
-        this.maxRetries = 3;
         this.consecutiveFailures = 0;
         this.maxConsecutiveFailures = 3;
     }
@@ -23,10 +20,10 @@ class StreamMonitor {
         this.createStatusIndicator();
 
         // Immediate first check
-        this.checkStatus(false);
+        this.checkStatus();
 
         // Setup interval for periodic checks
-        this.checkInterval = setInterval(() => this.checkStatus(), this.checkIntervalTime);
+        this.checkInterval = setInterval(() => this.checkStatus(), 30000); // 30 seconds
 
         // Clean up on page unload
         window.addEventListener('beforeunload', () => {
@@ -40,12 +37,13 @@ class StreamMonitor {
      * Create compact status indicator
      */
     createStatusIndicator() {
-        // Same as previous implementation
+        // Reuse existing indicator if present
         if (document.getElementById('stream-status-indicator')) {
             this.statusIndicator = document.getElementById('stream-status-indicator');
             return;
         }
 
+        // Create status indicator
         this.statusIndicator = document.createElement('div');
         this.statusIndicator.id = 'stream-status-indicator';
         this.statusIndicator.title = 'Stream URL Status';
@@ -62,9 +60,11 @@ class StreamMonitor {
             cursor: help;
         `;
 
+        // Add event listeners for tooltip
         this.statusIndicator.addEventListener('mouseenter', () => this.showTooltip());
         this.statusIndicator.addEventListener('mouseleave', () => this.hideTooltip());
 
+        // Create tooltip element
         const tooltip = document.createElement('div');
         tooltip.id = 'stream-status-tooltip';
         tooltip.style.cssText = `
@@ -185,26 +185,27 @@ class StreamMonitor {
         } catch (error) {
             // Retry logic
             this.retryCount++;
-            if (this.retryCount <= this.maxRetries) {
+            if (this.retryCount <= 3) {
                 const retryDelay = Math.min(1000 * Math.pow(2, this.retryCount), 30000);
 
                 // Update status to show retry
                 this.updateStatusIndicator({
                     active: false,
-                    message: `Connection error. Retrying (${this.retryCount}/${this.maxRetries})...`
+                    message: `Connection error. Retrying (${this.retryCount}/3)...`
                 });
 
                 // Schedule retry
-                setTimeout(() => this.checkStatus(), retryDelay);
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+                return this.checkStatus();
             } else {
                 // Max retries reached
                 this.updateStatusIndicator({
                     active: false,
-                    message: 'Unable to check recording URL status'
+                    message: 'Unable to check stream URL status'
                 });
-            }
 
-            return null;
+                return null;
+            }
         }
     }
 }
