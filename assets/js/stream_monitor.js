@@ -11,6 +11,18 @@ class StreamMonitor {
         this.checkInProgress = false;
         this.firstCheckDone = false;
         this.statusTextElement = null;
+
+        // Debugging flag
+        this.debugMode = true;
+    }
+
+    /**
+     * Debug logging method
+     */
+    debug(message) {
+        if (this.debugMode) {
+            console.log(`[StreamMonitor] ${message}`);
+        }
     }
 
     /**
@@ -42,11 +54,11 @@ class StreamMonitor {
     findStatusTextElement() {
         // The status text is inside the element with class "status-text"
         this.statusTextElement = document.querySelector('.status-text');
-        console.log("Status text element found:", this.statusTextElement);
+        this.debug(`Status text element ${this.statusTextElement ? 'found' : 'not found'}`);
     }
 
     /**
-     * Create compact status indicator
+     * Create status indicator
      */
     createStatusIndicator() {
         // Reuse existing indicator if present
@@ -55,7 +67,6 @@ class StreamMonitor {
             return;
         }
 
-        // Create status indicator
         this.statusIndicator = document.createElement('div');
         this.statusIndicator.id = 'stream-status-indicator';
         this.statusIndicator.title = 'Stream URL Status';
@@ -109,18 +120,18 @@ class StreamMonitor {
         if (!tooltip) return;
 
         const status = this.lastStatus;
-        
+
         if (status) {
             let tooltipContent = status.active
                 ? `Stream URL is accessible<br>Click to recheck`
                 : `Stream URL is not accessible<br>Click to recheck`;
-                
+
             // Add time info
             if (status.last_check) {
                 const lastCheckTime = new Date(status.last_check * 1000).toLocaleTimeString();
                 tooltipContent += `<br>Last checked: ${lastCheckTime}`;
             }
-            
+
             tooltip.innerHTML = tooltipContent;
             tooltip.style.display = 'block';
         }
@@ -145,110 +156,80 @@ class StreamMonitor {
             if (!this.statusTextElement) return;
         }
 
-        if (status && status.active) {
-            this.statusTextElement.textContent = 'Recording Stopped';
-        } else if (status) {
-            this.statusTextElement.textContent = 'Stream URL Not Accessible';
+        // Check if recording is in progress
+        const recordingStatus = document.getElementById('recordingStatus');
+        const isRecordingActive = recordingStatus && recordingStatus.classList.contains('recording-active');
+
+        this.debug(`Updating status text. Recording active: ${isRecordingActive}, Status: ${JSON.stringify(status)}`);
+
+        if (isRecordingActive) {
+            // Always show recording in progress during an active recording
+            this.statusTextElement.textContent = 'Recording in Progress (DO NOT refresh your browser!)';
+        } else {
+            // When not recording, show stream status
+            if (status) {
+                this.statusTextElement.textContent = status.active === true
+                    ? 'Recording Stopped'
+                    : 'Stream URL Not Accessible';
+            } else {
+                // Fallback to generic message if no status
+                this.statusTextElement.textContent = 'Stream URL Not Accessible';
+            }
         }
     }
-    
-    /**
-     * Show a notification message
-     */
-    showNotification(message, type = 'info') {
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type} alert-dismissible fade show fixed-top mx-auto mt-3`;
-        notification.style.maxWidth = '500px';
-        notification.style.zIndex = '9999';
-        
-        notification.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        `;
-        
-        // Add to body
-        document.body.appendChild(notification);
-        
-        // Auto-remove after delay
-        setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => notification.remove(), 300);
-        }, 5000);
-    }
 
     /**
-     * Force DOM redraw for an element
-     */
-    forceRedraw(element) {
-        // Some ways to force a repaint
-        const originalDisplay = element.style.display;
-        element.style.display = 'none';
-        void element.offsetHeight; // Trigger reflow
-        element.style.display = originalDisplay;
-        
-        // Also try changing a non-visible property
-        element.style.opacity = '0.99';
-        setTimeout(() => {
-            element.style.opacity = '1';
-        }, 20);
-    }
-
-    /**
-     * Update the status indicator with guaranteed visual update
+     * Update the status indicator
      */
     updateStatusIndicator(status) {
         if (!this.statusIndicator) return;
-        console.log("Updating status indicator with:", status);
 
-        // Clear any existing styles and classes
+        this.debug(`Updating status indicator. Raw status: ${JSON.stringify(status)}`);
+
+        // Clear existing styles
         this.statusIndicator.style.animation = 'none';
         this.statusIndicator.classList.remove('status-check', 'status-active', 'status-inactive');
 
-        // Temporarily update to the checking state
+        // Checking state
         if (status && status.checking) {
-            // Method 1: Direct style
             this.statusIndicator.style.backgroundColor = '#FFC107'; // Yellow
             this.statusIndicator.style.animation = 'pulse 2s infinite';
             this.statusIndicator.title = 'Checking stream URL...';
-            
-            // Method 2: Class-based
             this.statusIndicator.classList.add('status-check');
-            
-            // Force a redraw
             this.forceRedraw(this.statusIndicator);
             return;
         }
 
-        // Update status text if needed
-        this.updateStatusText(status);
+        // Determine color and status
+        let newColor = '#6c757d'; // Default gray
+        let className = '';
+        let title = 'Stream URL status unknown';
 
-        // Determine the color based on status
-        let newColor, className;
-        if (status && status.active) {
-            newColor = '#28a745'; // Green
-            className = 'status-active';
-            this.statusIndicator.title = 'Stream URL is accessible';
-        } else if (status) {
-            newColor = '#dc3545'; // Red
-            className = 'status-inactive';
-            this.statusIndicator.title = 'Stream URL is not accessible';
-        } else {
-            newColor = '#6c757d'; // Gray
-            this.statusIndicator.title = 'Stream URL status unknown';
+        // Explicit handling of status
+        if (status) {
+            // Increased strictness for accessibility
+            if (status.active === true) {
+                newColor = '#28a745'; // Green
+                className = 'status-active';
+                title = 'Stream URL is accessible';
+            } else {
+                newColor = '#dc3545'; // Red
+                className = 'status-inactive';
+                title = 'Stream URL is not accessible';
+            }
         }
 
-        // Method 1: Use multiple approaches to ensure color change is visible
-        // Direct style change
+        this.debug(`Setting indicator: Color=${newColor}, Class=${className}, Title=${title}`);
+
+        // Update indicator
         this.statusIndicator.style.backgroundColor = newColor;
-        
-        // Method 2: Class-based approach
-        this.statusIndicator.classList.add(className);
-        
-        // Method 3: Force a DOM reflow
+        this.statusIndicator.title = title;
+        if (className) {
+            this.statusIndicator.classList.add(className);
+        }
+
+        // Force visual update
         this.forceRedraw(this.statusIndicator);
-        
-        // Method 4: Brief animation to ensure visibility change is noticeable
         this.statusIndicator.animate([
             { transform: 'scale(1.2)' },
             { transform: 'scale(1.0)' }
@@ -262,60 +243,36 @@ class StreamMonitor {
      * Force a new stream check
      */
     forceCheck() {
-        // Only allow if not already checking
         if (this.checkInProgress) {
-            this.showNotification('Check already in progress, please wait', 'info');
+            this.debug('Check already in progress, cannot force new check');
             return;
         }
 
-        // Show checking state
-        this.updateStatusIndicator({
-            checking: true,
-            message: 'Checking stream URL...'
-        });
-
-        // Show notification
-        this.showNotification('Checking stream URL...', 'info');
-
-        // Start the check
+        this.debug('Forcing stream status check');
+        this.updateStatusIndicator({ checking: true });
         this.checkStatus(true);
     }
 
     /**
      * Check stream URL status
-     * @param {boolean} forceCheck - Whether to force a fresh check
      */
     async checkStatus(forceCheck = false) {
-        // Prevent multiple simultaneous checks
-        if (this.checkInProgress) {
-            return;
-        }
+        if (this.checkInProgress) return;
 
         this.checkInProgress = true;
+        this.debug(`Starting status check. Force check: ${forceCheck}`);
 
         try {
-            // Show checking state
-            this.updateStatusIndicator({
-                checking: true,
-                message: 'Checking stream URL...'
-            });
+            this.updateStatusIndicator({ checking: true });
 
-            // Build URL with cache buster
             const timestamp = Date.now();
-            const queryParams = [];
-            
-            if (forceCheck) {
-                queryParams.push('force_check=1');
-            }
-            
-            // Always add cache buster
+            const queryParams = forceCheck ? ['force_check=1'] : [];
             queryParams.push(`t=${timestamp}`);
-            
+
             const url = `check_stream_url.php?${queryParams.join('&')}`;
-            
-            console.log("Checking stream status...");
-            
-            // Make the request with explicit cache control
+
+            this.debug(`Checking stream status at: ${url}`);
+
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -325,71 +282,60 @@ class StreamMonitor {
                 }
             });
 
-            // Check response status
             if (!response.ok) {
                 throw new Error(`Server returned ${response.status}: ${response.statusText}`);
             }
 
-            // Parse JSON response
             const result = await response.json();
-            console.log("Stream status response:", result);
+            this.debug(`Stream status response: ${JSON.stringify(result)}`);
 
-            // Check if result has a "checking" status
+            // Handling checking status
             if (result.checking) {
-                console.log("Stream is being checked, will retry shortly");
-                
-                // Wait 2 seconds and try again
+                this.debug('Stream is being checked, will retry shortly');
                 setTimeout(() => {
                     this.checkInProgress = false;
                     this.checkStatus(forceCheck);
                 }, 2000);
-                
                 return;
             }
 
-            // Check if status changed
-            const statusChanged = !this.lastStatus || 
-                (this.lastStatus.active !== result.active);
-                
-            if (statusChanged && this.firstCheckDone) {
-                // Show notification if status changed (but not on first check)
-                this.showNotification(
-                    `Stream status changed: Stream URL is now ${result.active ? 'accessible' : 'not accessible'}`,
-                    result.active ? 'success' : 'danger'
-                );
-            }
-            
             // Update last status
             this.lastStatus = result;
             this.firstCheckDone = true;
 
-            // Update status indicator
+            // Update indicator and status text
             this.updateStatusIndicator(result);
-            
-            // Show notification on forced check
-            if (forceCheck) {
-                this.showNotification(
-                    `Stream check complete: Stream URL is ${result.active ? 'accessible' : 'not accessible'}`,
-                    'info'
-                );
-            }
+            this.updateStatusText(result);
 
             this.checkInProgress = false;
             return result;
 
         } catch (error) {
-            console.error('Error checking stream status:', error);
-            
-            // Show error notification on forced check
-            if (forceCheck) {
-                this.showNotification(
-                    `Error checking stream: ${error.message}`,
-                    'danger'
-                );
-            }
-            
+            this.debug(`Error checking stream status: ${error.message}`);
+
+            // Reset to a default "not accessible" state on error
+            const errorStatus = { active: false, message: 'Error checking stream URL' };
+            this.lastStatus = errorStatus;
+            this.updateStatusIndicator(errorStatus);
+            this.updateStatusText(errorStatus);
+
             this.checkInProgress = false;
         }
+    }
+
+    /**
+     * Force DOM redraw for an element
+     */
+    forceRedraw(element) {
+        const originalDisplay = element.style.display;
+        element.style.display = 'none';
+        void element.offsetHeight; // Trigger reflow
+        element.style.display = originalDisplay;
+
+        element.style.opacity = '0.99';
+        setTimeout(() => {
+            element.style.opacity = '1';
+        }, 20);
     }
 }
 
@@ -421,7 +367,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         `;
         document.head.appendChild(style);
-        
+
         // Initialize the stream monitor
         setTimeout(() => {
             window.streamMonitor = new StreamMonitor();
