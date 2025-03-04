@@ -3,6 +3,9 @@ class RecordingController {
         this.isRecording = false;
         this.recordingTimer = null;
         this.startTime = 0;
+        this.usingRedundant = false;
+        this.primaryActive = false;
+        this.secondaryActive = false;
         this.setupEventListeners();
         this.checkRecordingStatus();
     }
@@ -29,23 +32,39 @@ class RecordingController {
 
     async checkRecordingStatus() {
         try {
-            const [recordingResponse, streamResponse] = await Promise.all([
+            const [recordingResponse, streamResponse, redundantResponse] = await Promise.all([
                 fetch('recording_status.php'),
-                fetch('check_stream_url.php')
+                fetch('check_stream_url.php'),
+                fetch('check_redundant_recording.php').catch(() => ({ json: () => Promise.resolve({ redundant: false }) }))
             ]);
 
             const recordingData = await recordingResponse.json();
             const streamData = await streamResponse.json();
 
+            // Try to get redundant recording status, but don't fail if endpoint doesn't exist
+            let redundantData = { redundant: false };
+            try {
+                redundantData = await redundantResponse.json();
+            } catch (error) {
+                console.log('Redundant recording status check not available');
+            }
+
             // Combine recording and stream data for UI update
             const combinedData = {
                 ...recordingData,
                 stream_accessible: streamData.active,
-                stream_message: streamData.message
+                stream_message: streamData.message,
+                using_redundant: redundantData.using_redundant || false,
+                primary_active: redundantData.primary || false,
+                secondary_active: redundantData.secondary || false
             };
 
             // Update UI with combined data
             this.isRecording = recordingData.recording_active;
+            this.usingRedundant = combinedData.using_redundant;
+            this.primaryActive = combinedData.primary_active;
+            this.secondaryActive = combinedData.secondary_active;
+
             this.updateUI(combinedData);
 
             if (recordingData.recording_active && recordingData.recording_start) {
@@ -95,7 +114,15 @@ class RecordingController {
 
                 const statusText = recordingStatus.querySelector('.status-text');
                 if (statusText) {
-                    statusText.textContent = 'Recording in Progress (DO NOT refresh your browser!)';
+                    // If using redundant recording, show status of both streams
+                    if (data.using_redundant) {
+                        const primaryStatus = data.primary_active ? 'Active' : 'Inactive';
+                        const secondaryStatus = data.secondary_active ? 'Active' : 'Inactive';
+                        statusText.innerHTML = `Recording in Progress (DO NOT refresh your browser!)<br>
+                            <small>Primary: ${primaryStatus}, Secondary: ${secondaryStatus}</small>`;
+                    } else {
+                        statusText.textContent = 'Recording in Progress (DO NOT refresh your browser!)';
+                    }
                 }
             } else {
                 recordingStatus.classList.remove('recording-active');
@@ -113,6 +140,14 @@ class RecordingController {
 
     async startRecording() {
         try {
+            // Show loading state on button
+            const startButton = document.getElementById('startRecordingBtn');
+            if (startButton) {
+                const originalContent = startButton.innerHTML;
+                startButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Starting...';
+                startButton.disabled = true;
+            }
+
             const response = await fetch('recording_actions.php', {
                 method: 'POST',
                 headers: {
@@ -126,12 +161,31 @@ class RecordingController {
             if (result.success) {
                 this.isRecording = true;
                 this.startTime = result.start_time;
+                this.usingRedundant = result.redundant || false;
+                this.primaryActive = result.primary_success || false;
+                this.secondaryActive = result.secondary_success || false;
+
                 this.startTimer();
-                this.updateUI({ recording_active: true, recording_start: result.start_time, stream_accessible: true });
+
+                // Update UI with the new recording state
+                this.updateUI({
+                    recording_active: true,
+                    recording_start: result.start_time,
+                    stream_accessible: true,
+                    using_redundant: this.usingRedundant,
+                    primary_active: this.primaryActive,
+                    secondary_active: this.secondaryActive
+                });
 
                 this.showNotification('Recording started successfully', 'success');
                 this.triggerPageUpdate();
             } else {
+                // Reset start button
+                if (startButton) {
+                    startButton.innerHTML = '<i class="bi bi-record-circle"></i> Start Recording';
+                    startButton.disabled = false;
+                }
+
                 this.showNotification('Failed to start recording: ' + result.message, 'error');
 
                 // Recheck status to update UI
@@ -140,6 +194,13 @@ class RecordingController {
         } catch (error) {
             console.error('Error starting recording:', error);
             this.showNotification('Error starting recording. Check console for details.', 'error');
+
+            // Reset start button
+            const startButton = document.getElementById('startRecordingBtn');
+            if (startButton) {
+                startButton.innerHTML = '<i class="bi bi-record-circle"></i> Start Recording';
+                startButton.disabled = false;
+            }
 
             // Recheck status to update UI
             this.checkRecordingStatus();
@@ -152,6 +213,14 @@ class RecordingController {
         }
 
         try {
+            // Show loading state on button
+            const stopButton = document.getElementById('stopRecordingBtn');
+            if (stopButton) {
+                const originalContent = stopButton.innerHTML;
+                stopButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Stopping...';
+                stopButton.disabled = true;
+            }
+
             const response = await fetch('recording_actions.php', {
                 method: 'POST',
                 headers: {
@@ -166,12 +235,23 @@ class RecordingController {
                 this.isRecording = false;
                 this.stopTimer();
 
+                // Reset redundant status
+                this.usingRedundant = false;
+                this.primaryActive = false;
+                this.secondaryActive = false;
+
                 // Recheck status to update UI
                 this.checkRecordingStatus();
 
                 this.showNotification('Recording stopped successfully', 'success');
                 this.triggerPageUpdate();
             } else {
+                // Reset stop button
+                if (stopButton) {
+                    stopButton.innerHTML = '<i class="bi bi-stop-circle"></i> Stop Recording';
+                    stopButton.disabled = false;
+                }
+
                 this.showNotification('Failed to stop recording: ' + result.message, 'error');
 
                 // Recheck status to update UI
@@ -180,6 +260,13 @@ class RecordingController {
         } catch (error) {
             console.error('Error stopping recording:', error);
             this.showNotification('Error stopping recording. Check console for details.', 'error');
+
+            // Reset stop button
+            const stopButton = document.getElementById('stopRecordingBtn');
+            if (stopButton) {
+                stopButton.innerHTML = '<i class="bi bi-stop-circle"></i> Stop Recording';
+                stopButton.disabled = false;
+            }
 
             // Recheck status to update UI
             this.checkRecordingStatus();
@@ -248,5 +335,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const isAdmin = document.body.dataset.isAdmin === 'true';
     if (isAdmin) {
         window.recordingController = new RecordingController();
+
+        // Set up a periodic recording status check
+        setInterval(() => {
+            if (window.recordingController) {
+                window.recordingController.checkRecordingStatus();
+            }
+        }, 30000); // Check every 30 seconds
     }
 });
