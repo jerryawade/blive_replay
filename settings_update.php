@@ -25,13 +25,12 @@ try {
     
     // Process boolean checkboxes
     $booleanSettings = [
-        'show_recordings',
-        'show_livestream',
-        'allow_vlc',
-        'allow_m3u',
+        'show_recordings', 
+        'show_livestream', 
+        'allow_vlc', 
+        'allow_m3u', 
         'allow_mp4',
-        'enable_scheduler',
-        'use_redundant_recording'
+        'enable_scheduler'  // Add the scheduler checkbox
     ];
     
     foreach ($booleanSettings as $setting) {
@@ -43,9 +42,6 @@ try {
         'server_url' => rtrim($_POST['server_url'], '/'),
         'live_stream_url' => $_POST['live_stream_url'],
         'srt_url' => $_POST['srt_url'],
-        'srt_url_secondary' => $_POST['srt_url_secondary'] ?? '',
-        'use_redundant_recording' => $_POST['use_redundant_recording'] ?? false,
-        'redundant_recording_strategy' => $_POST['redundant_recording_strategy'] ?? 'auto',
         'show_recordings' => $_POST['show_recordings'],
         'show_livestream' => $_POST['show_livestream'],
         'allow_vlc' => $_POST['allow_vlc'],
@@ -53,8 +49,8 @@ try {
         'allow_mp4' => $_POST['allow_mp4'],
         'vlc_webpage_url' => $_POST['vlc_webpage_url'],
         'timezone' => $_POST['timezone'],
-        'enable_scheduler' => $_POST['enable_scheduler'],
-        'scheduler_notification_email' => $_POST['scheduler_notification_email'] ?? ''
+        'enable_scheduler' => $_POST['enable_scheduler'],                  // Add scheduler enable option
+        'scheduler_notification_email' => $_POST['scheduler_notification_email'] ?? ''  // Add notification email
     ];
     
     // Update settings

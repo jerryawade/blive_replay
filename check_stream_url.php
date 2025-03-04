@@ -1,6 +1,6 @@
 <?php
 /**
- * Asynchronous Stream URL Validator with Improved Logging
+ * Asynchronous Stream URL Validator with Comprehensive Logging
  */
 
 require_once 'settings.php';
@@ -29,18 +29,16 @@ $maxLogSize = 1 * 1024 * 1024; // 1 MB
 $maxLogLines = 5000; // Maximum number of log lines to keep
 
 /**
- * Truncate log file if it exceeds maximum lines
- * @param string $logFile Path to log file
- * @param int $maxLines Maximum number of lines to keep
- * @return bool Success status
+ * Truncate log file if it exceeds the maximum number of lines
  */
-function truncateLog($logFile, $maxLines = 5000) {
-    if (!file_exists($logFile)) return true;
+function truncateLog($logFile, $maxLines = 5000)
+{
+    if (!file_exists($logFile)) return false;
 
     $lines = file($logFile);
     $totalLines = count($lines);
 
-    if ($totalLines <= $maxLines) return true;
+    if ($totalLines <= $maxLines) return false;
 
     // Calculate how many lines to remove (keep the newest entries)
     $linesToKeep = $maxLines;
@@ -54,20 +52,21 @@ function truncateLog($logFile, $maxLines = 5000) {
 }
 
 /**
- * Log stream check details
- * @param string $message Log message
+ * Log a message to the stream URL check log file
+ *
+ * @param string $message Message to log
  * @param string $level Log level (info, warning, error)
- * @param string $streamType Stream type (primary/secondary/combined)
  */
-function logStreamCheck($message, $level = 'info', $streamType = 'combined') {
+function logStreamCheck($message, $level = 'info')
+{
     global $logFile, $maxLogSize, $maxLogLines;
 
-    // Truncate log if needed
+    // Truncate log if it's too large
     truncateLog($logFile, $maxLogLines);
 
     // Prepare log entry
     $timestamp = date('Y-m-d H:i:s');
-    $logEntry = "[{$timestamp}] [{$level}] [{$streamType}] {$message}\n";
+    $logEntry = "[$timestamp] [$level] $message\n";
 
     // Append to log file, rotate if needed
     if (file_exists($logFile) && filesize($logFile) > $maxLogSize) {
@@ -80,57 +79,49 @@ function logStreamCheck($message, $level = 'info', $streamType = 'combined') {
 
 /**
  * Validate Video Stream
- * @param string $url Stream URL to validate
- * @param string $type Stream type (primary/secondary)
- * @return array Validation result
+ * Uses multiple methods to check stream accessibility
  */
-function validateVideoStream($url, $type = 'primary') {
-    // Log start of stream validation
-    logStreamCheck("Validating {$type} stream", 'info', $type);
-
-    // Check if URL is empty
-    if (empty($url)) {
-        $result = [
-            'active' => false,
-            'message' => "No {$type} stream URL configured"
-        ];
-        logStreamCheck("No stream URL configured", 'error', $type);
-        return $result;
-    }
+function validateVideoStream($url)
+{
+    // Log the start of stream validation
+    logStreamCheck("Starting stream URL validation for: $url", 'info');
 
     // Method 1: Quick FFprobe check
     $infoCommand = sprintf(
-        "ffprobe -v quiet -print_format json -show_entries stream=codec_type -of default=noprint_wrappers=1 %s 2>&1",
+        "ffprobe -v quiet -print_format json -show_format -show_streams %s 2>&1",
         escapeshellarg($url)
     );
     exec($infoCommand, $output, $returnVal);
 
-    // Log basic FFprobe result
-    logStreamCheck("FFprobe return value: {$returnVal}", 'debug', $type);
+    // Log FFprobe command result
+    logStreamCheck("FFprobe command result: Return Val = $returnVal", 'debug');
 
     if ($returnVal === 0) {
-        // Count video streams
-        $videoStreams = array_filter($output, function($line) {
-            return strpos($line, 'codec_type=video') !== false;
-        });
-        $videoStreamCount = count($videoStreams);
+        $streamInfo = json_decode(implode("\n", $output), true);
 
-        if ($videoStreamCount > 0) {
-            $result = [
+        // Check for video streams
+        $videoStreams = array_filter(
+            $streamInfo['streams'] ?? [],
+            function ($stream) {
+                return ($stream['codec_type'] ?? '') === 'video';
+            }
+        );
+
+        if (!empty($videoStreams)) {
+            // Log successful stream detection via FFprobe
+            logStreamCheck("Stream URL is accessible. Video streams detected.", 'info');
+            return [
                 'active' => true,
-                'message' => "{$type} stream is accessible",
-                'streams' => $videoStreamCount
+                'message' => 'Stream URL is accessible',
+                'streams' => $videoStreams
             ];
-            logStreamCheck("Found {$videoStreamCount} video stream(s)", 'info', $type);
-            return $result;
         } else {
-            $result = [
-                'active' => false,
-                'message' => "No video streams found in {$type} stream"
-            ];
-            logStreamCheck("No video streams found", 'warning', $type);
-            return $result;
+            // Log that no video streams were found
+            logStreamCheck("No video streams found via FFprobe.", 'warning');
         }
+    } else {
+        // Log FFprobe failure
+        logStreamCheck("FFprobe command failed. Output: " . implode("\n", $output), 'warning');
     }
 
     // Method 2: Frame capture test
@@ -142,17 +133,20 @@ function validateVideoStream($url, $type = 'primary') {
     );
     exec($captureCommand, $output, $returnVal);
 
-    // Log frame capture result
-    logStreamCheck("FFmpeg frame capture return value: {$returnVal}", 'debug', $type);
+    // Log frame capture command result
+    logStreamCheck("FFmpeg frame capture command result: Return Val = $returnVal", 'debug');
 
     if ($returnVal === 0 && file_exists($tempFrame) && filesize($tempFrame) > 0) {
         unlink($tempFrame);
-        $result = [
+        // Log successful frame capture
+        logStreamCheck("Stream URL is accessible via frame capture method.", 'info');
+        return [
             'active' => true,
-            'message' => "{$type} stream accessible via frame capture"
+            'message' => 'Stream URL is accessible via frame capture'
         ];
-        logStreamCheck("Stream accessible via frame capture", 'info', $type);
-        return $result;
+    } else {
+        // Log frame capture failure
+        logStreamCheck("Frame capture failed. Output: " . implode("\n", $output), 'warning');
     }
 
     // Cleanup temp file if it exists
@@ -161,46 +155,54 @@ function validateVideoStream($url, $type = 'primary') {
     }
 
     // If all methods fail
-    $result = [
+    logStreamCheck("Stream URL is not accessible after multiple validation attempts.", 'error');
+    return [
         'active' => false,
-        'message' => "{$type} stream is not accessible"
+        'message' => 'Stream URL is not accessible'
     ];
-    logStreamCheck("Stream not accessible after multiple validation attempts", 'error', $type);
-    return $result;
 }
 
-// Get the target stream type to check (primary or secondary)
-$streamType = $_GET['stream'] ?? 'primary';
-
+// Perform stream check
 try {
-    // Log start of check
-    logStreamCheck("Starting stream status check", 'info', 'combined');
-    logStreamCheck("Checking {$streamType} stream", 'info', 'combined');
+    // Get the stream URL from settings
+    $settingsManager = new SettingsManager();
+    $settings = $settingsManager->getSettings();
+    $streamUrl = $settings['srt_url'] ?? '';
 
-    // Get stream URL from settings
-    $streamUrl = '';
-    if ($streamType === 'secondary') {
-        $streamUrl = $settings['srt_url_secondary'] ?? '';
-    } else {
-        $streamUrl = $settings['srt_url'] ?? '';
+    // Log the start of the process
+    logStreamCheck("Stream URL check initiated by " . ($_SESSION['username'] ?? 'Unknown User'), 'info');
+
+    // Validate input
+    if (empty($streamUrl)) {
+        logStreamCheck("No stream URL configured in settings.", 'error');
+        echo json_encode([
+            'success' => false,
+            'active' => false,
+            'message' => 'No recording URL configured in settings'
+        ]);
+        exit;
     }
 
-    // Validate and check the stream
-    $result = validateVideoStream($streamUrl, $streamType);
+    // Check if a bypass cache parameter is set
+    $bypassCache = isset($_GET['bypass_cache']);
+    if ($bypassCache) {
+        logStreamCheck("Cache bypass requested for stream validation.", 'info');
+    }
 
-    // Log final result
-    logStreamCheck("Stream check completed", 'info', 'combined');
-    logStreamCheck("Stream status: " . ($result['active'] ? 'Accessible' : 'Not Accessible'), 'info', 'combined');
+    // Perform validation
+    $result = validateVideoStream($streamUrl);
 
-    // Return result
+    // Log the final result
+    logStreamCheck("Stream validation completed. Result: " . ($result['active'] ? 'Accessible' : 'Not Accessible'), 'info');
+
     echo json_encode($result);
 } catch (Exception $e) {
     // Log any unexpected errors
-    logStreamCheck("Unexpected error during stream check: " . $e->getMessage(), 'error', 'combined');
+    logStreamCheck("Unexpected error during stream check: " . $e->getMessage(), 'error');
 
     echo json_encode([
         'active' => false,
-        'message' => "Error checking {$streamType} stream: " . $e->getMessage()
+        'message' => 'Error checking stream: ' . $e->getMessage()
     ]);
 }
 exit;
