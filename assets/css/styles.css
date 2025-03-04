@@ -15,7 +15,7 @@
 .recording-active {
     background-color: #ffdede;
     color: #dc3545;
-    animation: pulse 2s infinite;
+    /*animation: pulse 2s infinite;*/
 }
 
 .recording-inactive {
