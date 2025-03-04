@@ -69,13 +69,23 @@ class FFmpegService
     }
 
     /**
-     * Check if recording is currently active
+     * Check if recording is currently active - either primary or secondary
      *
-     * @return bool True if recording is active
+     * @return bool True if either primary or secondary recording is active
      */
     public function isRecordingActive(): bool
     {
-        return file_exists($this->pidFile);
+        // Recording is active if either primary or secondary process is running
+        $primaryActive = file_exists($this->pidFile);
+        $secondaryActive = file_exists($this->pidFileSecondary);
+
+        // Log detailed status info
+        if ($primaryActive || $secondaryActive) {
+            $this->log("Recording status check: Primary: " . ($primaryActive ? "Active" : "Inactive") .
+                ", Secondary: " . ($secondaryActive ? "Active" : "Inactive"));
+        }
+
+        return $primaryActive || $secondaryActive;
     }
 
     /**
@@ -150,11 +160,16 @@ class FFmpegService
 
         // Start primary recording
         $primaryResult = $this->startSingleRecording($srtUrl, $outputFile);
+        $this->log("Primary recording result: " . ($primaryResult['success'] ? "success" : "failed"));
 
-        // Start secondary recording if enabled
+        // Start secondary recording if enabled and secondary URL is provided
         $secondaryResult = ['success' => false, 'pid' => null];
-        if ($useRedundant && $srtUrlSecondary) {
+        if ($useRedundant && $srtUrlSecondary && !empty($srtUrlSecondary) && $outputFileSecondary) {
+            $this->log("Starting secondary recording process...");
             $secondaryResult = $this->startSingleRecording($srtUrlSecondary, $outputFileSecondary, true);
+            $this->log("Secondary recording result: " . ($secondaryResult['success'] ? "success" : "failed"));
+        } else if ($useRedundant) {
+            $this->log("Secondary recording skipped - missing URL or output file");
         }
 
         // If at least one recording started successfully
@@ -165,20 +180,26 @@ class FFmpegService
 
             // Write primary control files
             if ($primaryResult['success']) {
+                $this->log("Writing primary control files with PID: " . $primaryResult['pid']);
                 file_put_contents($this->pidFile, $primaryResult['pid']);
                 file_put_contents($this->currentRecordingFile, $outputFile);
+            } else {
+                $this->log("Not writing primary control files - primary recording failed");
             }
 
             // Write secondary control files
             if ($useRedundant && $secondaryResult['success']) {
+                $this->log("Writing secondary control files with PID: " . $secondaryResult['pid']);
                 file_put_contents($this->pidFileSecondary, $secondaryResult['pid']);
                 file_put_contents($this->currentRecordingFileSecondary, $outputFileSecondary);
+            } else if ($useRedundant) {
+                $this->log("Not writing secondary control files - secondary recording failed or not enabled");
             }
 
             // Write shared control files
             file_put_contents($this->recordingStartFile, $now);
 
-            // Save redundant status information
+            // Save redundant status information - always save even if not using redundant (set flags to false)
             $redundantStatus = [
                 'timestamp' => $now,
                 'primary_active' => $primaryResult['success'],
@@ -186,7 +207,8 @@ class FFmpegService
                 'primary_file' => $outputFile,
                 'secondary_file' => $outputFileSecondary,
                 'primary_pid' => $primaryResult['pid'],
-                'secondary_pid' => $secondaryResult['pid']
+                'secondary_pid' => $secondaryResult['pid'],
+                'using_redundant' => $useRedundant
             ];
             file_put_contents($this->redundantStatusFile, json_encode($redundantStatus, JSON_PRETTY_PRINT));
 
@@ -243,6 +265,16 @@ class FFmpegService
         $streamLabel = $isSecondary ? "Secondary" : "Primary";
         $this->log("Starting $streamLabel recording process...");
 
+        // Only attempt to start recording if SRT URL is not empty
+        if (empty($srtUrl)) {
+            $this->log("$streamLabel SRT URL is empty, skipping recording");
+            return [
+                'success' => false,
+                'pid' => null,
+                'message' => "$streamLabel SRT URL is empty"
+            ];
+        }
+
         // Command preparation
         $command = 'ffmpeg -i ' . escapeshellarg($srtUrl) .
             ' -vsync 1' .                         // Enable video sync
@@ -268,10 +300,11 @@ class FFmpegService
 
         // Test if process is running
         if ($pid) {
+            $pid = trim($pid); // Ensure no whitespace in PID
             $psCommand = "ps -p " . intval($pid) . " > /dev/null 2>&1";
-            $processCheck = shell_exec($psCommand);
-            $processRunning = $processCheck !== null;
-            $this->log("$streamLabel process check result: " . ($processRunning ? "Process running" : "Process not found"));
+            exec($psCommand, $psOutput, $psReturnCode);
+            $processRunning = ($psReturnCode === 0);
+            $this->log("$streamLabel process check result: " . ($processRunning ? "Process running" : "Process not found") . " (Return code: $psReturnCode)");
 
             return [
                 'success' => $processRunning,
@@ -657,14 +690,54 @@ class FFmpegService
      */
     public function getRedundantStatus(): ?array
     {
+        // Always check if the file exists first
         if (!file_exists($this->redundantStatusFile)) {
+            $this->log("Redundant status file not found");
             return null;
         }
 
-        $statusJson = file_get_contents($this->redundantStatusFile);
-        $status = json_decode($statusJson, true);
+        try {
+            $statusJson = file_get_contents($this->redundantStatusFile);
+            if ($statusJson === false) {
+                $this->log("Failed to read redundant status file");
+                return null;
+            }
 
-        return $status ?: null;
+            $status = json_decode($statusJson, true);
+            if ($status === null && json_last_error() !== JSON_ERROR_NONE) {
+                $this->log("Failed to parse redundant status file: " . json_last_error_msg());
+                return null;
+            }
+
+            // Ensure basic fields exist
+            if (!isset($status['primary_active']) || !isset($status['secondary_active'])) {
+                $this->log("Redundant status file missing required fields");
+                return null;
+            }
+
+            // Verify if processes are still running
+            if (isset($status['primary_pid']) && !empty($status['primary_pid'])) {
+                $primaryPid = trim($status['primary_pid']);
+                $psCommand = "ps -p " . intval($primaryPid) . " > /dev/null 2>&1";
+                exec($psCommand, $psOutput, $psReturnCode);
+                $status['primary_active'] = ($psReturnCode === 0);
+            }
+
+            if (isset($status['secondary_pid']) && !empty($status['secondary_pid'])) {
+                $secondaryPid = trim($status['secondary_pid']);
+                $psCommand = "ps -p " . intval($secondaryPid) . " > /dev/null 2>&1";
+                exec($psCommand, $psOutput, $psReturnCode);
+                $status['secondary_active'] = ($psReturnCode === 0);
+            }
+
+            // Update the status file with current process status
+            file_put_contents($this->redundantStatusFile, json_encode($status, JSON_PRETTY_PRINT));
+
+            return $status;
+        } catch (Exception $e) {
+            $this->log("Error getting redundant status: " . $e->getMessage());
+            return null;
+        }
     }
 
     /**
@@ -681,17 +754,26 @@ class FFmpegService
 
         // Check primary stream
         if (file_exists($this->pidFile)) {
-            $pid = file_get_contents($this->pidFile);
-            $psCheck = shell_exec("ps -p " . intval($pid) . " > /dev/null 2>&1");
-            $status['primary'] = $psCheck !== null;
+            $pid = trim(file_get_contents($this->pidFile));
+            if (!empty($pid)) {
+                $psCommand = "ps -p " . intval($pid) . " > /dev/null 2>&1";
+                exec($psCommand, $psOutput, $psReturnCode);
+                $status['primary'] = ($psReturnCode === 0);
+            }
         }
 
         // Check secondary stream
         if (file_exists($this->pidFileSecondary)) {
-            $pid = file_get_contents($this->pidFileSecondary);
-            $psCheck = shell_exec("ps -p " . intval($pid) . " > /dev/null 2>&1");
-            $status['secondary'] = $psCheck !== null;
+            $pid = trim(file_get_contents($this->pidFileSecondary));
+            if (!empty($pid)) {
+                $psCommand = "ps -p " . intval($pid) . " > /dev/null 2>&1";
+                exec($psCommand, $psOutput, $psReturnCode);
+                $status['secondary'] = ($psReturnCode === 0);
+            }
         }
+
+        $this->log("Stream status check: Primary: " . ($status['primary'] ? "Running" : "Not running") .
+            ", Secondary: " . ($status['secondary'] ? "Running" : "Not running"));
 
         return $status;
     }
@@ -897,5 +979,46 @@ class FFmpegService
         $result = shell_exec($command);
 
         return trim($result ?? 'Unknown');
+    }
+
+    /**
+     * Delete a recording file and its thumbnail
+     *
+     * @param string $videoFile Path to the video file
+     * @param string $username Username for logging
+     * @param object $activityLogger Logger for activity
+     * @return bool Success status
+     */
+    public function deleteRecording(string $videoFile, string $username, $activityLogger): bool
+    {
+        $fileName = basename($videoFile);
+        $this->log("Deleting recording: $fileName");
+
+        $success = true;
+
+        // Delete the video file
+        if (file_exists($videoFile)) {
+            $unlinkResult = unlink($videoFile);
+            $this->log("Video file deletion: " . ($unlinkResult ? "success" : "failed"));
+            $success = $success && $unlinkResult;
+        } else {
+            $this->log("Video file not found: $videoFile");
+            $success = false;
+        }
+
+        // Delete the thumbnail
+        $thumbnailFile = $this->thumbnailsDir . '/' . pathinfo($fileName, PATHINFO_FILENAME) . '.jpg';
+        if (file_exists($thumbnailFile)) {
+            $unlinkResult = unlink($thumbnailFile);
+            $this->log("Thumbnail deletion: " . ($unlinkResult ? "success" : "failed"));
+            $success = $success && $unlinkResult;
+        }
+
+        // Log the activity
+        if ($activityLogger) {
+            $activityLogger->logActivity($username, 'deleted_recording', $fileName);
+        }
+
+        return $success;
     }
 }

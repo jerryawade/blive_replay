@@ -50,8 +50,21 @@ switch ($action) {
         }
 
         // Check if redundant recording is enabled
-        $useRedundant = isset($settings['use_redundant_recording']) && $settings['use_redundant_recording'];
-        $streamUrlSecondary = $useRedundant ? ($settings['srt_url_secondary'] ?? '') : '';
+        $useRedundant = isset($settings['use_redundant_recording']) &&
+            ($settings['use_redundant_recording'] === true ||
+                $settings['use_redundant_recording'] === '1' ||
+                $settings['use_redundant_recording'] === 1);
+        $streamUrlSecondary = '';
+
+        if ($useRedundant) {
+            $streamUrlSecondary = $settings['srt_url_secondary'] ?? '';
+            $activityLogger->logActivity(
+                $_SESSION['username'],
+                'redundant_setup',
+                "Redundant recording enabled: " . ($useRedundant ? 'Yes' : 'No') .
+                ", Secondary URL: " . (!empty($streamUrlSecondary) ? 'Set' : 'Empty')
+            );
+        }
 
         // If redundant recording is enabled but no secondary URL is set, log a warning
         if ($useRedundant && empty($streamUrlSecondary)) {
@@ -60,12 +73,9 @@ switch ($action) {
                 'recording_warning',
                 'Redundant recording enabled but no secondary URL configured'
             );
-
-            // Fall back to non-redundant mode
-            $useRedundant = false;
         }
 
-        // Start the recording
+        // Start the recording (still pass secondary URL even if empty so logging works properly)
         $result = $ffmpegService->startRecording(
             $streamUrl,
             $_SESSION['username'],
