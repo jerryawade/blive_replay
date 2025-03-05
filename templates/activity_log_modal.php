@@ -47,7 +47,14 @@
                             <button class="nav-link" id="streamLogTab" data-bs-toggle="tab"
                                     data-bs-target="#streamLogContent" type="button" role="tab"
                                     aria-controls="streamLogContent" aria-selected="false">
-                                <i class="bi bi-reception-4 me-1"></i> Stream Check
+                                <i class="bi bi-reception-4 me-1"></i> Stream
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="emailLogTab" data-bs-toggle="tab"
+                                    data-bs-target="#emailLogContent" type="button" role="tab"
+                                    aria-controls="emailLogContent" aria-selected="false">
+                                <i class="bi bi-envelope-paper me-1"></i> Email
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -152,7 +159,23 @@
                                 </pre>
                             </div>
                         </div>
-                        
+
+                        <!-- Email Log Content -->
+                        <div class="tab-pane fade" id="emailLogContent" role="tabpanel"
+                             style="height: 100%; overflow-y: auto; overflow-x: hidden;">
+                            <div style="display: flex; flex-direction: column; min-height: 100%;">
+        <pre class="email-log-pre"
+             style="margin: 0; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; flex-grow: 1; font-family: monospace;">
+<div class="log-loading-spinner">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading email logs...</span>
+    </div>
+    <p class="mt-2">Loading email logs...</p>
+</div>
+        </pre>
+                            </div>
+                        </div>
+
                         <!-- Debug Log Content -->
                         <div class="tab-pane fade" id="debugLogContent" role="tabpanel"
                              style="height: 100%; overflow-y: auto; overflow-x: hidden;">
@@ -187,65 +210,71 @@
 
 <!-- Add spinner styles -->
 <style>
-/* Log Loading Spinner Styles */
-.log-loading-spinner {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    min-height: 200px;
-    width: 100%;
-}
-
-.log-loading-spinner .spinner-border {
-    width: 3rem;
-    height: 3rem;
-    border-width: 0.25rem;
-}
-
-.log-loading-spinner p {
-    margin-top: 1rem;
-    font-size: 1rem;
-    color: #6c757d;
-}
-
-/* Animation for the loading spinner */
-@keyframes pulse-opacity {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
-}
-
-.log-loading-spinner .spinner-border {
-    animation: spinner-border 0.75s linear infinite, pulse-opacity 2s ease-in-out infinite;
-}
-
-/* Auto-refresh indicator styles */
-.auto-refresh-indicator {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-right: 1rem;
-    font-size: 0.75rem;
-}
-
-.auto-refresh-indicator .spinner-border {
-    width: 0.8rem;
-    height: 0.8rem;
-    border-width: 0.1rem;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
+    /* Log Loading Spinner Styles */
     .log-loading-spinner {
-        min-height: 150px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 200px;
+        width: 100%;
     }
-    
+
     .log-loading-spinner .spinner-border {
-        width: 2rem;
-        height: 2rem;
+        width: 3rem;
+        height: 3rem;
+        border-width: 0.25rem;
     }
-}
+
+    .log-loading-spinner p {
+        margin-top: 1rem;
+        font-size: 1rem;
+        color: #6c757d;
+    }
+
+    /* Animation for the loading spinner */
+    @keyframes pulse-opacity {
+        0% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.5;
+        }
+        100% {
+            opacity: 1;
+        }
+    }
+
+    .log-loading-spinner .spinner-border {
+        animation: spinner-border 0.75s linear infinite, pulse-opacity 2s ease-in-out infinite;
+    }
+
+    /* Auto-refresh indicator styles */
+    .auto-refresh-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-right: 1rem;
+        font-size: 0.75rem;
+    }
+
+    .auto-refresh-indicator .spinner-border {
+        width: 0.8rem;
+        height: 0.8rem;
+        border-width: 0.1rem;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .log-loading-spinner {
+            min-height: 150px;
+        }
+
+        .log-loading-spinner .spinner-border {
+            width: 2rem;
+            height: 2rem;
+        }
+    }
 </style>
 
 <script>
@@ -264,7 +293,7 @@
         if (!activeTab) return;
 
         const tabId = activeTab.id;
-        
+
         // Show loading spinner for the active tab
         if (tabId === 'userLogTab') {
             const tableBody = document.getElementById('activityLogTableBody');
@@ -335,6 +364,19 @@
                 `;
             }
             refreshStreamLog();
+        } else if (tabId === 'emailLogTab') {
+            const preElement = document.querySelector('.email-log-pre');
+            if (preElement) {
+                preElement.innerHTML = `
+                <div class="log-loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading email logs...</span>
+                    </div>
+                    <p class="mt-2">Loading email logs...</p>
+                </div>
+            `;
+            }
+            refreshEmailLog();
         } else if (tabId === 'debugLogTab') {
             const preElement = document.querySelector('.debug-log-pre');
             if (preElement) {
@@ -354,7 +396,7 @@
     function updateUserLogDisplay() {
         const tbody = document.getElementById('activityLogTableBody');
         tbody.innerHTML = '';
-        
+
         if (!fullUserLogData || fullUserLogData.length === 0) {
             tbody.innerHTML = `
                 <tr>
@@ -366,7 +408,7 @@
             `;
             return;
         }
-        
+
         fullUserLogData.forEach(activity => {
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -526,6 +568,37 @@
             });
     }
 
+    let fullEmailLogData = '';
+
+    function refreshEmailLog() {
+        fetch('get_email_log.php')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                return response.text();
+            })
+            .then(data => {
+                fullEmailLogData = data;
+                document.querySelector('.email-log-pre').textContent = data;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                const preElement = document.querySelector('.email-log-pre');
+                if (preElement) {
+                    preElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5><i class="bi bi-exclamation-triangle-fill me-2"></i>Error Loading Log</h5>
+                        <p>${error.message || 'The server did not respond.'}</p>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="refreshEmailLog()">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Retry
+                        </button>
+                    </div>
+                `;
+                }
+            });
+    }
+
     function refreshDebugLog() {
         fetch('get_debug_log.php')
             .then(response => {
@@ -561,14 +634,14 @@
         if (!activeTab) return;
 
         const tabId = activeTab.id;
-        
+
         // Show loading state on the print button
         const printButton = document.querySelector('button[onclick="printLog()"]');
         if (printButton) {
             const originalContent = printButton.innerHTML;
             printButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Preparing...';
             printButton.disabled = true;
-            
+
             setTimeout(() => {
                 printButton.innerHTML = originalContent;
                 printButton.disabled = false;
@@ -620,13 +693,24 @@
                         })
                         .catch(error => console.error('Error:', error));
                     break;
-                    
+
                 case 'streamLogTab':
                     fetch('get_stream_url_check_log.php')
                         .then(response => response.text())
                         .then(data => {
                             fullStreamLogData = data;
                             document.querySelector('.stream-log-pre').textContent = data;
+                            window.print();
+                        })
+                        .catch(error => console.error('Error:', error));
+                    break;
+
+                case 'emailLogTab':
+                    fetch('get_email_log.php')
+                        .then(response => response.text())
+                        .then(data => {
+                            fullEmailLogData = data;
+                            document.querySelector('.email-log-pre').textContent = data;
                             window.print();
                         })
                         .catch(error => console.error('Error:', error));
