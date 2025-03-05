@@ -18,7 +18,17 @@ class SettingsManager
 
         // Scheduler settings
         'enable_scheduler' => false,
-        'scheduler_notification_email' => ''
+        'scheduler_notification_email' => '',
+
+        // Email notification settings
+        'email_notifications_enabled' => false,
+        'smtp_host' => '',
+        'smtp_port' => '587',
+        'smtp_security' => 'tls', // tls, ssl, or none
+        'smtp_username' => '',
+        'smtp_password' => '',
+        'smtp_from_email' => '',
+        'smtp_from_name' => 'RePlay System'
     ];
 
     public function __construct()
@@ -255,20 +265,6 @@ function renderSettingsModal($settings)
                                     <small class="text-muted">When enabled, recordings will automatically start and stop
                                         based on your defined schedules.</small>
                                 </div>
-                                <div class="mb-3">
-                                    <label for="scheduler_notification_email" class="form-label">Notification Email
-                                        (Optional)</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">
-                                            <i class="bi bi-envelope"></i>
-                                        </span>
-                                        <input type="email" class="form-control" id="scheduler_notification_email"
-                                               name="scheduler_notification_email"
-                                               value="<?php echo htmlspecialchars($settings['scheduler_notification_email'] ?? ''); ?>">
-                                    </div>
-                                    <small class="text-muted">Receive notifications about scheduled recordings (requires
-                                        server mail configuration)</small>
-                                </div>
                                 <div class="mb-2">
                                     <button type="button" class="btn btn-outline-primary btn-sm icon-btn"
                                             id="manageSchedulesBtn"
@@ -276,6 +272,185 @@ function renderSettingsModal($settings)
                                         <i class="bi bi-calendar-plus"></i>
                                         Manage Recording Schedules
                                     </button>
+                                </div>
+                            </div>
+
+                            <!-- Email Notification Settings Section -->
+                            <div class="mb-4">
+                                <h6 class="mb-3 fw-bold">
+                                    <i class="bi bi-envelope me-2"></i>
+                                    Email Notification Settings
+                                </h6>
+                                <div class="mb-2">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="email_notifications_enabled"
+                                               name="email_notifications_enabled"
+                                            <?php echo isset($settings['email_notifications_enabled']) && $settings['email_notifications_enabled'] ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="email_notifications_enabled">
+                                            <i class="bi bi-bell me-2"></i>
+                                            Enable email notifications
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">When enabled, notifications will be sent for scheduled
+                                        recording events.</small>
+                                </div>
+
+                                <div id="smtp_settings_container" class="border rounded p-3 mt-3"
+                                     style="display: <?php echo isset($settings['email_notifications_enabled']) && $settings['email_notifications_enabled'] ? 'block' : 'none'; ?>;">
+                                    <div class="mb-3">
+                                        <label for="scheduler_notification_email" class="form-label">Notification
+                                            Email</label>
+                                        <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="bi bi-envelope-at"></i>
+                                        </span>
+                                            <input type="email" class="form-control" id="scheduler_notification_email"
+                                                   name="scheduler_notification_email"
+                                                   value="<?php echo htmlspecialchars($settings['scheduler_notification_email'] ?? ''); ?>"
+                                                   placeholder="notifications@example.com">
+                                        </div>
+                                        <small class="text-muted">Email address to receive notifications about scheduled
+                                            recordings</small>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="smtp_host" class="form-label">SMTP Server</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="bi bi-server"></i>
+                                                </span>
+                                                <input type="text" class="form-control" id="smtp_host" name="smtp_host"
+                                                       value="<?php echo htmlspecialchars($settings['smtp_host'] ?? ''); ?>"
+                                                       placeholder="smtp.gmail.com">
+                                            </div>
+                                            <small class="text-muted">e.g., smtp.gmail.com, smtp.office365.com</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="smtp_port" class="form-label">SMTP Port</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="bi bi-hdd-network"></i>
+                                                </span>
+                                                <input type="text" class="form-control" id="smtp_port" name="smtp_port"
+                                                       value="<?php echo htmlspecialchars($settings['smtp_port'] ?? '587'); ?>"
+                                                       placeholder="587">
+                                            </div>
+                                            <small class="text-muted">587 (TLS), 465 (SSL), or 25 (non-secure)</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="smtp_security" class="form-label">Connection Security</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="bi bi-shield-lock"></i>
+                                            </span>
+                                            <select class="form-select" id="smtp_security" name="smtp_security">
+                                                <option value="tls" <?php echo (isset($settings['smtp_security']) && $settings['smtp_security'] === 'tls') ? 'selected' : ''; ?>>
+                                                    TLS
+                                                </option>
+                                                <option value="ssl" <?php echo (isset($settings['smtp_security']) && $settings['smtp_security'] === 'ssl') ? 'selected' : ''; ?>>
+                                                    SSL
+                                                </option>
+                                                <option value="none" <?php echo (isset($settings['smtp_security']) && $settings['smtp_security'] === 'none') ? 'selected' : ''; ?>>
+                                                    None
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <small class="text-muted">TLS is recommended for most providers</small>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="smtp_username" class="form-label">SMTP Username</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="bi bi-person"></i>
+                                                </span>
+                                                <input type="text" class="form-control" id="smtp_username"
+                                                       name="smtp_username"
+                                                       value="<?php echo htmlspecialchars($settings['smtp_username'] ?? ''); ?>"
+                                                       placeholder="user@example.com">
+                                            </div>
+                                            <small class="text-muted">Usually your email address</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="smtp_password" class="form-label">SMTP Password</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="bi bi-key"></i>
+                                                </span>
+                                                <input type="password" class="form-control" id="smtp_password"
+                                                       name="smtp_password"
+                                                       value="<?php echo htmlspecialchars($settings['smtp_password'] ?? ''); ?>"
+                                                       placeholder="Password or App Password">
+                                                <button class="btn btn-outline-secondary toggle-password" type="button">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </div>
+                                            <small class="text-muted">Use app password for Gmail or services with
+                                                2FA</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="smtp_from_email" class="form-label">From Email</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="bi bi-at"></i>
+                                                </span>
+                                                <input type="email" class="form-control" id="smtp_from_email"
+                                                       name="smtp_from_email"
+                                                       value="<?php echo htmlspecialchars($settings['smtp_from_email'] ?? ''); ?>"
+                                                       placeholder="replay@yourdomain.com">
+                                            </div>
+                                            <small class="text-muted">Must be authorized by your SMTP provider</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="smtp_from_name" class="form-label">From Name</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="bi bi-person-badge"></i>
+                                                </span>
+                                                <input type="text" class="form-control" id="smtp_from_name"
+                                                       name="smtp_from_name"
+                                                       value="<?php echo htmlspecialchars($settings['smtp_from_name'] ?? 'RePlay System'); ?>"
+                                                       placeholder="RePlay System">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        <strong>Gmail Users:</strong> You'll need to use an "App Password" if you have
+                                        2-factor authentication enabled.
+                                        <a href="https://support.google.com/accounts/answer/185833" target="_blank"
+                                           class="alert-link">
+                                            Learn how to create an App Password
+                                        </a>
+                                    </div>
+
+                                    <!-- Test email section with inline notification -->
+                                    <div class="mt-3 border-top pt-3">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div>
+                                                <h6 class="mb-0">Test Email Configuration</h6>
+                                                <p class="text-muted small mb-0">Verify your email settings by sending a
+                                                    test email</p>
+                                            </div>
+                                            <button type="button" class="btn btn-outline-primary btn-sm icon-btn"
+                                                    id="testEmailButton">
+                                                <i class="bi bi-envelope-check"></i>
+                                                Send Test Email
+                                            </button>
+                                        </div>
+
+                                        <!-- Test email notification area (hidden by default) -->
+                                        <div id="emailTestNotification" class="mt-2" style="display: none;">
+                                            <!-- Content will be dynamically generated -->
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -342,6 +517,119 @@ function renderSettingsModal($settings)
                 }, {once: true});
             }, 400);
         });
+
+        // Toggle SMTP settings visibility based on checkbox
+        document.addEventListener('DOMContentLoaded', function () {
+            const emailNotificationsCheckbox = document.getElementById('email_notifications_enabled');
+            const smtpContainer = document.getElementById('smtp_settings_container');
+            const notificationEmailField = document.getElementById('scheduler_notification_email');
+
+            if (emailNotificationsCheckbox && smtpContainer) {
+                // Initial required state
+                notificationEmailField.required = emailNotificationsCheckbox.checked;
+
+                // Toggle on change
+                emailNotificationsCheckbox.addEventListener('change', function () {
+                    smtpContainer.style.display = this.checked ? 'block' : 'none';
+                    notificationEmailField.required = this.checked;
+
+                    // If turning off notifications, validate the form to clear any existing errors
+                    if (!this.checked) {
+                        const form = document.getElementById('settingsForm');
+                        if (form) form.checkValidity();
+                    }
+                });
+
+                // Handle test email button
+                const testEmailButton = document.getElementById('testEmailButton');
+                const emailTestNotification = document.getElementById('emailTestNotification');
+
+                if (testEmailButton && emailTestNotification) {
+                    testEmailButton.addEventListener('click', function () {
+                        // Basic validation before sending
+                        if (!notificationEmailField.value) {
+                            showEmailTestResult(false, 'Please enter a notification email address');
+                            notificationEmailField.focus();
+                            return;
+                        }
+
+                        if (!document.getElementById('smtp_host').value ||
+                            !document.getElementById('smtp_username').value ||
+                            !document.getElementById('smtp_password').value) {
+                            showEmailTestResult(false, 'Please complete all required SMTP fields');
+                            return;
+                        }
+
+                        // Get the current form values
+                        const formData = new FormData(document.getElementById('settingsForm'));
+
+                        // Show loading state
+                        testEmailButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Sending...';
+                        testEmailButton.disabled = true;
+                        showEmailTestResult('loading', 'Sending test email...');
+
+                        // Send test email
+                        fetch('test_email.php', {
+                            method: 'POST',
+                            body: formData
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    showEmailTestResult(true, 'Test email sent successfully! Please check your inbox.');
+                                } else {
+                                    showEmailTestResult(false, data.message || 'Error sending test email');
+                                }
+                            })
+                            .catch(error => {
+                                showEmailTestResult(false, error.message || 'Error communicating with the server');
+                            })
+                            .finally(() => {
+                                // Reset button state
+                                testEmailButton.innerHTML = '<i class="bi bi-envelope-check"></i> Send Test Email';
+                                testEmailButton.disabled = false;
+                            });
+                    });
+                }
+
+                // Function to show test email results
+                function showEmailTestResult(success, message) {
+                    if (emailTestNotification) {
+                        if (success === 'loading') {
+                            emailTestNotification.innerHTML = `
+                                <div class="alert alert-info">
+                                    <div class="d-flex align-items-center">
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                        <span>${message}</span>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            const alertClass = success ? 'alert-success' : 'alert-danger';
+                            const icon = success ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
+
+                            emailTestNotification.innerHTML = `
+                                <div class="alert ${alertClass}">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi ${icon} me-2"></i>
+                                        <span>${message}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        emailTestNotification.style.display = 'block';
+
+                        // Auto-hide success messages after 10 seconds
+                        if (success === true) {
+                            setTimeout(() => {
+                                emailTestNotification.style.display = 'none';
+                            }, 10000);
+                        }
+                    }
+                }
+            }
+        });
     </script>
     <?php
     return ob_get_clean();
@@ -363,7 +651,17 @@ function handleSettingsUpdate($settingsManager)
             'vlc_webpage_url' => $_POST['vlc_webpage_url'] ?? '',
             'timezone' => $_POST['timezone'] ?? 'America/Chicago',
             'enable_scheduler' => isset($_POST['enable_scheduler']),
-            'scheduler_notification_email' => $_POST['scheduler_notification_email'] ?? ''
+            'scheduler_notification_email' => $_POST['scheduler_notification_email'] ?? '',
+
+            // Email notification settings
+            'email_notifications_enabled' => isset($_POST['email_notifications_enabled']),
+            'smtp_host' => $_POST['smtp_host'] ?? '',
+            'smtp_port' => $_POST['smtp_port'] ?? '587',
+            'smtp_security' => $_POST['smtp_security'] ?? 'tls',
+            'smtp_username' => $_POST['smtp_username'] ?? '',
+            'smtp_password' => $_POST['smtp_password'] ?? '',
+            'smtp_from_email' => $_POST['smtp_from_email'] ?? '',
+            'smtp_from_name' => $_POST['smtp_from_name'] ?? 'RePlay System'
         ];
         $settingsManager->updateSettings($newSettings, $_SESSION['username']);
         header("Location: " . $_SERVER['PHP_SELF']);

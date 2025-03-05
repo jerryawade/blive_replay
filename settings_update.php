@@ -22,21 +22,51 @@ if (!isset($_POST['update_settings'])) {
 try {
     // Initialize components
     $settingsManager = new SettingsManager();
-    
+
     // Process boolean checkboxes
     $booleanSettings = [
-        'show_recordings', 
-        'show_livestream', 
-        'allow_vlc', 
-        'allow_m3u', 
+        'show_recordings',
+        'show_livestream',
+        'allow_vlc',
+        'allow_m3u',
         'allow_mp4',
-        'enable_scheduler'  // Add the scheduler checkbox
+        'enable_scheduler',
+        'email_notifications_enabled'
     ];
-    
+
     foreach ($booleanSettings as $setting) {
         $_POST[$setting] = isset($_POST[$setting]) && ($_POST[$setting] === '1' || $_POST[$setting] === 'on');
     }
-    
+
+    // Validate email notification settings
+    if ($_POST['email_notifications_enabled']) {
+        // Check if notification email is provided
+        if (empty($_POST['scheduler_notification_email'])) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Notification email is required when email notifications are enabled'
+            ]);
+            exit;
+        }
+
+        // Validate required SMTP fields
+        $requiredSmtpFields = [
+            'smtp_host' => 'SMTP Host',
+            'smtp_username' => 'SMTP Username',
+            'smtp_password' => 'SMTP Password'
+        ];
+
+        foreach ($requiredSmtpFields as $field => $label) {
+            if (empty($_POST[$field])) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => $label . ' is required when email notifications are enabled'
+                ]);
+                exit;
+            }
+        }
+    }
+
     // Prepare new settings
     $newSettings = [
         'server_url' => rtrim($_POST['server_url'], '/'),
@@ -49,25 +79,35 @@ try {
         'allow_mp4' => $_POST['allow_mp4'],
         'vlc_webpage_url' => $_POST['vlc_webpage_url'],
         'timezone' => $_POST['timezone'],
-        'enable_scheduler' => $_POST['enable_scheduler'],                  // Add scheduler enable option
-        'scheduler_notification_email' => $_POST['scheduler_notification_email'] ?? ''  // Add notification email
+        'enable_scheduler' => $_POST['enable_scheduler'],
+        'scheduler_notification_email' => $_POST['scheduler_notification_email'] ?? '',
+
+        // Email notification settings
+        'email_notifications_enabled' => $_POST['email_notifications_enabled'],
+        'smtp_host' => $_POST['smtp_host'],
+        'smtp_port' => $_POST['smtp_port'],
+        'smtp_security' => $_POST['smtp_security'],
+        'smtp_username' => $_POST['smtp_username'],
+        'smtp_password' => $_POST['smtp_password'],
+        'smtp_from_email' => $_POST['smtp_from_email'],
+        'smtp_from_name' => $_POST['smtp_from_name'],
     ];
-    
+
     // Update settings
     $settingsManager->updateSettings($newSettings, $_SESSION['username']);
-    
+
     // Determine if a page reload is required
     // Certain settings changes might need a full page reload to take effect
     $reloadRequired = true;
-    
+
     echo json_encode([
-        'success' => true, 
+        'success' => true,
         'message' => 'Settings updated successfully',
         'reload' => $reloadRequired
     ]);
 } catch (Exception $e) {
     echo json_encode([
-        'success' => false, 
+        'success' => false,
         'message' => 'Error updating settings: ' . $e->getMessage()
     ]);
 }

@@ -20,6 +20,7 @@ chdir(dirname(__FILE__));
 require_once 'FFmpegService.php';
 require_once 'logging.php';
 require_once 'settings.php';
+require_once 'EmailService.php';
 
 class SchedulerService
 {
@@ -36,6 +37,9 @@ class SchedulerService
 
     // Active recording tracking
     private $activeRecording = false;
+
+    // Email service
+    private $emailService;
 
     /**
      * Constructor
@@ -136,14 +140,53 @@ class SchedulerService
                 $state['last_action_time'] = time();
                 $state['current_schedule_id'] = $activeScheduleId;
                 $this->saveState($state);
+
+                // Send email notification if enabled
+                if (isset($this->settings['email_notifications_enabled']) &&
+                    $this->settings['email_notifications_enabled'] &&
+                    !empty($this->settings['scheduler_notification_email'])) {
+
+                    // Add schedule info to the recording data
+                    $emailData = $result;
+                    $emailData['schedule_name'] = $activeScheduleTitle;
+                    $emailData['schedule_id'] = $activeScheduleId;
+
+                    $this->log("Sending recording start notification email");
+                    $emailResult = $this->emailService->sendRecordingStartNotification($emailData);
+
+                    if ($emailResult['success']) {
+                        $this->log("Recording start notification email sent successfully");
+                    } else {
+                        $this->log("Failed to send recording start notification email: " . $emailResult['message']);
+                    }
+                }
             } else {
                 $this->log("Failed to start recording: " . ($result['message'] ?? 'Unknown error'));
             }
-        } 
+        }
         // Check if we need to stop a recording started by the scheduler
         // Only if no active schedule is found AND the current recording was started by the scheduler
         else if (!$activeScheduleFound && $this->activeRecording && $startedByScheduler) {
             $this->log("Stopping scheduled recording as no active schedule found");
+
+            // Collect data before stopping for the email notification
+            $currentRecordingFile = $this->ffmpegService->getCurrentRecordingFile();
+            $startTime = $this->ffmpegService->getRecordingStartTime();
+            $endTime = time();
+
+            // Get current schedule for notification
+            $scheduleTitle = "Scheduled Recording";
+            $scheduleId = $state['current_schedule_id'] ?? null;
+            if ($scheduleId) {
+                // Find the schedule by ID
+                $schedules = $this->getSchedules();
+                foreach ($schedules as $schedule) {
+                    if ($schedule['id'] === $scheduleId) {
+                        $scheduleTitle = $schedule['title'];
+                        break;
+                    }
+                }
+            }
 
             // Stop recording
             $result = $this->ffmpegService->stopRecording(
@@ -160,10 +203,33 @@ class SchedulerService
                 $state['last_action_time'] = time();
                 $state['current_schedule_id'] = null;
                 $this->saveState($state);
+
+                // Send email notification if enabled
+                if (isset($this->settings['email_notifications_enabled']) &&
+                    $this->settings['email_notifications_enabled'] &&
+                    !empty($this->settings['scheduler_notification_email'])) {
+
+                    // Prepare data for email notification
+                    $emailData = $result;
+                    $emailData['schedule_name'] = $scheduleTitle;
+                    $emailData['schedule_id'] = $scheduleId;
+                    $emailData['start_time'] = $startTime;
+                    $emailData['end_time'] = $endTime;
+                    $emailData['full_path'] = $currentRecordingFile;
+
+                    $this->log("Sending recording complete notification email");
+                    $emailResult = $this->emailService->sendRecordingCompleteNotification($emailData);
+
+                    if ($emailResult['success']) {
+                        $this->log("Recording complete notification email sent successfully");
+                    } else {
+                        $this->log("Failed to send recording complete notification email: " . $emailResult['message']);
+                    }
+                }
             } else {
                 $this->log("Failed to stop recording: " . ($result['message'] ?? 'Unknown error'));
             }
-        } 
+        }
         // If already recording and should continue recording (under scheduler control)
         else if ($activeScheduleFound && $this->activeRecording && $startedByScheduler) {
             // Check if we switched to a different schedule
@@ -197,8 +263,8 @@ class SchedulerService
             return true;
         }
 
-        // Check file size
-        $maxLogSize = 5242880; // 5MB (same as ActivityLogger)
+        // Check file size - changed to 1MB
+        $maxLogSize = 1048576; // 1MB
         $fileSize = filesize($this->schedulerLogFile);
 
         // If file is under size limit and we're not forcing cleanup, skip
@@ -238,16 +304,15 @@ class SchedulerService
             return true;
         });
 
+        // If we still have too many lines after filtering by date, just keep the newest ones
+        if (count($keptLines) > 1000) {
+            $keptLines = array_slice($keptLines, -1000);
+        }
+
         // Join filtered lines back into a single string
         $newContent = implode("\n", $keptLines);
 
-        // Backup the original file
-        $backupFile = $this->schedulerLogFile . '.' . date('Y-m-d-H-i-s') . '.bak';
-        if (!copy($this->schedulerLogFile, $backupFile)) {
-            $this->log("Failed to create backup of scheduler log during rotation");
-        }
-
-        // Write the cleaned content back to the log file
+        // Write the cleaned content back to the log file (no backup created)
         $writeResult = file_put_contents($this->schedulerLogFile, $newContent);
         if ($writeResult === false) {
             $this->log("Failed to write updated scheduler log file during rotation");
