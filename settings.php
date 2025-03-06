@@ -522,7 +522,7 @@ function renderSettingsModal($settings)
                             </div>
 
                             <div class="tab-pane fade" id="downloads-config" role="tabpanel">
-                                <div class="card">
+                                <div class="card mb-4">
                                     <div class="card-header">
                                         <i class="bi bi-download me-2"></i>
                                         VLC Handlers
@@ -561,6 +561,64 @@ function renderSettingsModal($settings)
                                                     <li>Compatible with Windows 10 and 11</li>
                                                     <li>Requires VLC media player 3.0 or newer</li>
                                                     <li>Supports live stream and one-click playback from BLIVE RePlay</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- New Auto-Close Handlers section -->
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="bi bi-power me-2"></i>
+                                        Auto-Close Chrome/VLC Handlers
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h5><i class="bi bi-apple me-2"></i>Mac Auto-Close Handler</h5>
+                                                <a href="vlc_handlers/mac_close_chrome_vlc.zip" class="btn btn-outline-primary icon-btn mb-3">
+                                                    <i class="bi bi-cloud-download me-2"></i>
+                                                    Download Mac Auto-Close Handler
+                                                </a>
+                                                <p class="text-muted">
+                                                    This handler automatically closes Chrome and VLC and is intended to be scheduled
+                                                    to run at night or the in the morning to close the two apps if left open.
+                                                    After downloading, unzip the file and and copy to your Applications folder.
+                                                    To schedule an app to run via the Mac Calendar (iCal), follow these steps:
+                                                    <br>
+                                                    1. Open Calendar app<br>
+                                                    2. Select or create the existing event<br>
+                                                    3. Click "Edit" or double-click the event<br>
+                                                    4. Click "Add Alarm"<br>
+                                                    5. Choose "Open file" action<br>
+                                                    6. Select the script/app to run<br>
+                                                    7. Set alarm time before event start<br>
+                                                    8. Save event
+                                                </p>
+                                                <ul class="small text-muted">
+                                                    <li>Compatible with macOS 10.14+ (Mojave and later)</li>
+                                                    <li>Automatically closes applications after stream</li>
+                                                    <li>Reduces system resource usage</li>
+                                                </ul>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h5><i class="bi bi-windows me-2"></i>Windows Auto-Close Handler</h5>
+                                                <a href="vlc_handlers/windows_close_chrome_vlc.zip" class="btn btn-outline-primary icon-btn mb-3">
+                                                    <i class="bi bi-cloud-download me-2"></i>
+                                                    Download Windows Auto-Close Handler
+                                                </a>
+                                                <p class="text-muted">
+                                                    This handler automatically closes Chrome and VLC and is intended to be scheduled
+                                                    to run at night or the in the morning to close the two apps if left open. Create a Scripts folder on your C:\ drive.
+                                                    After downloading, unzip the file and place the files in your Scripts folder.
+                                                    <br>You may double-click on the CreateTask.ps1 file to create the needed scheduled task in task scheduler.
+                                                    <br>By default, the task will run every night at 1:00 AM.
+                                                </p>
+                                                <ul class="small text-muted">
+                                                    <li>Compatible with Windows 10 and 11</li>
+                                                    <li>Automatically terminates streaming applications</li>
+                                                    <li>Helps manage system resources efficiently</li>
                                                 </ul>
                                             </div>
                                         </div>
