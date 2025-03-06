@@ -54,10 +54,10 @@ register_shutdown_function(function() use ($lockFile) {
 $streamUrl = $settings['srt_url'] ?? '';
 
 if (empty($streamUrl)) {
-    logMessage("No stream URL configured in settings", 'error');
+    logMessage("No recording URL configured in settings", 'error');
     $status = [
         'active' => false,
-        'message' => 'No stream URL configured in settings',
+        'message' => 'No recording URL configured in settings',
         'last_check' => time()
     ];
     file_put_contents($statusFile, json_encode($status, JSON_PRETTY_PRINT));
@@ -65,12 +65,12 @@ if (empty($streamUrl)) {
 }
 
 // Log the start of the process
-logMessage("Starting stream URL check: $streamUrl");
+logMessage("Starting recording URL check: $streamUrl");
 
 // Initialize default status
 $streamStatus = [
     'active' => false,
-    'message' => 'Stream URL is not accessible',
+    'message' => 'Recording URL is not accessible',
     'last_check' => time(),
     'check_duration' => 0
 ];
@@ -118,7 +118,7 @@ try {
         if ($videoStreams > 0) {
             logMessage("FFprobe found $videoStreams video streams");
             $streamStatus['active'] = true;
-            $streamStatus['message'] = "Stream URL is accessible ($videoStreams video streams)";
+            $streamStatus['message'] = "Recording URL is accessible ($videoStreams video streams)";
             $streamStatus['video_streams'] = $videoStreams;
             
             // End check early with success
@@ -126,7 +126,7 @@ try {
             $streamStatus['check_duration'] = round($endTime - $startTime, 2);
             file_put_contents($statusFile, json_encode($streamStatus, JSON_PRETTY_PRINT));
             
-            logMessage("Stream is ACCESSIBLE, completed in {$streamStatus['check_duration']}s");
+            logMessage("Recording URL is ACCESSIBLE, completed in {$streamStatus['check_duration']}s");
             exit;
         } else {
             logMessage("No video streams found in FFprobe output", 'warning');
@@ -156,7 +156,7 @@ try {
         unlink($tempFrame);
         
         $streamStatus['active'] = true;
-        $streamStatus['message'] = 'Stream URL is accessible (frame capture successful)';
+        $streamStatus['message'] = 'Recording URL is accessible (frame capture successful)';
     } else {
         logMessage("Frame capture failed with return code $captureReturnVal", 'error');
         
@@ -167,7 +167,7 @@ try {
         }
         
         $streamStatus['active'] = false;
-        $streamStatus['message'] = 'Stream URL is not accessible (frame capture failed)';
+        $streamStatus['message'] = 'Record URL is not accessible (frame capture failed)';
     }
     
     // Method 3: Simple connection test as last resort
@@ -201,7 +201,7 @@ $streamStatus['check_duration'] = round($endTime - $startTime, 2);
 file_put_contents($statusFile, json_encode($streamStatus, JSON_PRETTY_PRINT));
 
 // Log completion
-logMessage("Stream URL check completed in {$streamStatus['check_duration']}s. Result: " . 
+logMessage("Record URL check completed in {$streamStatus['check_duration']}s. Result: " .
     ($streamStatus['active'] ? 'ACCESSIBLE' : 'NOT ACCESSIBLE'));
 
 // Clean up lock file

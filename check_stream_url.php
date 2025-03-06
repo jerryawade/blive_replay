@@ -93,7 +93,7 @@ try {
             // No status file, return default checking status
             echo json_encode([
                 'active' => false,
-                'message' => 'Checking stream URL...',
+                'message' => 'Checking recording URL...',
                 'checking' => true,
                 'last_check' => time()
             ]);
@@ -137,7 +137,7 @@ try {
         // Return status indicating check is in progress
         echo json_encode([
             'active' => false,
-            'message' => 'Checking stream URL...',
+            'message' => 'Checking recording URL...',
             'checking' => true,
             'last_check' => time()
         ]);
@@ -193,7 +193,7 @@ try {
     // Create default status
     $defaultStatus = [
         'active' => false,
-        'message' => 'Checking stream URL for the first time...',
+        'message' => 'Checking recording URL for the first time...',
         'checking' => true,
         'last_check' => time()
     ];
