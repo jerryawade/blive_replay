@@ -29,143 +29,194 @@ date_default_timezone_set($settings['timezone'] ?? 'America/Chicago');
 
 // Status file path
 $statusFile = 'json/stream_status.json';
+// Lock file to prevent concurrent checks
+$lockFile = 'json/stream_check.lock';
+// Log file path
+$logFile = 'logs/stream_url_check.log';
+
+// Ensure directories exist
+if (!is_dir('json')) {
+    mkdir('json', 0777, true);
+}
+if (!is_dir('logs')) {
+    mkdir('logs', 0777, true);
+}
+
+// Helper function to log messages
+function logStreamCheck($message, $level = 'info') {
+    global $logFile;
+    $timestamp = date('Y-m-d H:i:s');
+    $logEntry = "[$timestamp] [$level] $message\n";
+    file_put_contents($logFile, $logEntry, FILE_APPEND);
+}
+
+// Check if we need to clear the status after a settings change
+if (isset($_SESSION['srt_url_changed']) && $_SESSION['srt_url_changed'] === true) {
+    // Clear status file to force a fresh check
+    if (file_exists($statusFile)) {
+        unlink($statusFile);
+        logStreamCheck("Cleared status file due to SRT URL change");
+    }
+    // Reset the flag
+    $_SESSION['srt_url_changed'] = false;
+}
 
 // Check if the user wants to force a new check
 $forceCheck = isset($_GET['force_check']) && $_GET['force_check'] == '1';
 
 try {
-    // If force check is requested, trigger the background service
+    // Check if a check is already in progress
+    $checkInProgress = false;
+    if (file_exists($lockFile)) {
+        $lockTime = filemtime($lockFile);
+        $now = time();
+        
+        // If lock file is older than 60 seconds, consider it stale
+        if ($now - $lockTime > 60) {
+            // Stale lock, remove it
+            unlink($lockFile);
+            logStreamCheck("Removed stale lock file (age: " . ($now - $lockTime) . "s)");
+        } else {
+            // Valid lock, check is in progress
+            $checkInProgress = true;
+        }
+    }
+    
+    // If a check is in progress, return status with checking flag
+    if ($checkInProgress) {
+        // If we have a status file, include its data
+        if (file_exists($statusFile)) {
+            $status = json_decode(file_get_contents($statusFile), true) ?: [];
+            $status['checking'] = true;
+            echo json_encode($status);
+        } else {
+            // No status file, return default checking status
+            echo json_encode([
+                'active' => false,
+                'message' => 'Checking stream URL...',
+                'checking' => true,
+                'last_check' => time()
+            ]);
+        }
+        exit;
+    }
+    
+    // If force check requested, initiate a new check
     if ($forceCheck) {
-        // Only allow force check every 2 seconds
+        // Rate limit force checks (max once every 5 seconds)
         $lastForceCheck = isset($_SESSION['last_force_check']) ? $_SESSION['last_force_check'] : 0;
         $now = time();
         
-        if ($now - $lastForceCheck < 2) {
-            // Return current status with a message
-            $status = getStreamStatus();
-            $status['message'] .= ' (Too many force checks, please wait)';
-            echo json_encode($status);
+        if ($now - $lastForceCheck < 5) {
+            logStreamCheck("Force check requested too soon", 'warning');
+            echo json_encode([
+                'active' => false,
+                'message' => 'Please wait a moment before checking again',
+                'checking' => true,
+                'last_check' => time()
+            ]);
             exit;
         }
         
-        // Update the session
+        // Update session with last check time
         $_SESSION['last_force_check'] = $now;
         
-        // First check if the service is already running
-        $isRunning = false;
-        if (PHP_OS_FAMILY !== 'Windows') {
-            exec("ps aux | grep stream_monitor_service.php | grep -v grep", $output);
-            $isRunning = !empty($output);
+        // Create lock file
+        file_put_contents($lockFile, date('Y-m-d H:i:s'));
+        
+        // Log the force check request
+        logStreamCheck("Force check requested by user: " . $_SESSION['username']);
+        
+        // Start the stream check in background
+        if (PHP_OS_FAMILY === 'Windows') {
+            pclose(popen('start /B php -f stream_monitor_service.php', 'r'));
+        } else {
+            exec('php -f stream_monitor_service.php > /dev/null 2>&1 &');
         }
         
-        if (!$isRunning) {
-            // Start the background process with highest priority
-            if (PHP_OS_FAMILY === 'Windows') {
-                pclose(popen('start /B php stream_monitor_service.php', 'r'));
-            } else {
-                // Run with nice to give higher priority
-                exec('nice -n -10 php stream_monitor_service.php > /dev/null 2>&1 &');
-            }
-            
-            // Log that a check was forced
-            $logFile = 'logs/stream_url_check.log';
-            $timestamp = date('Y-m-d H:i:s');
-            $logEntry = "[$timestamp] [info] Force check requested by user: {$_SESSION['username']}\n";
-            file_put_contents($logFile, $logEntry, FILE_APPEND);
-        }
-        
-        // Return temporary status while check is in progress
+        // Return status indicating check is in progress
         echo json_encode([
             'active' => false,
-            'message' => 'Stream check triggered, refreshing...',
+            'message' => 'Checking stream URL...',
             'checking' => true,
-            'last_check' => time(),
-            'next_check' => time() + 2
+            'last_check' => time()
         ]);
         exit;
     }
     
-    // Always return a fresh read of the status file
-    $status = getStreamStatus(true);
-    
-    // Automatically trigger a new check if status is too old (over 10 minutes)
-    if (time() - $status['last_check'] > 600) {
-        // First check if the service is already running
-        $isRunning = false;
-        if (PHP_OS_FAMILY !== 'Windows') {
-            exec("ps aux | grep stream_monitor_service.php | grep -v grep", $output);
-            $isRunning = !empty($output);
-        }
+    // Normal flow - check if we have a status file
+    if (file_exists($statusFile)) {
+        // Clear stat cache to get fresh file info
+        clearstatcache(true, $statusFile);
         
-        if (!$isRunning) {
-            if (PHP_OS_FAMILY === 'Windows') {
-                pclose(popen('start /B php stream_monitor_service.php', 'r'));
-            } else {
-                exec('php stream_monitor_service.php > /dev/null 2>&1 &');
+        // Read status file
+        $status = json_decode(file_get_contents($statusFile), true) ?: [];
+        
+        // Add age metadata
+        $status['file_age'] = time() - filemtime($statusFile);
+        
+        // Check if status is too old (over 5 minutes) and start a refresh
+        if (!isset($status['last_check']) || time() - $status['last_check'] > 300) {
+            if (!file_exists($lockFile)) {
+                // Create lock file
+                file_put_contents($lockFile, date('Y-m-d H:i:s'));
+                
+                // Log the auto-refresh
+                logStreamCheck("Status is too old, auto-refreshing");
+                
+                // Start background check
+                if (PHP_OS_FAMILY === 'Windows') {
+                    pclose(popen('start /B php -f stream_monitor_service.php', 'r'));
+                } else {
+                    exec('php -f stream_monitor_service.php > /dev/null 2>&1 &');
+                }
+                
+                // Return status with checking flag
+                $status['checking'] = true;
+                $status['message'] = 'Status is outdated, refreshing...';
+                echo json_encode($status);
+                exit;
             }
         }
         
-        $status['message'] .= ' (Check expired, refreshing in background)';
+        // Return current status
+        echo json_encode($status);
+        exit;
     }
     
-    echo json_encode($status);
+    // No status file exists, create one and trigger a check
+    logStreamCheck("No status file exists, creating default and triggering check");
+    
+    // Create lock file
+    file_put_contents($lockFile, date('Y-m-d H:i:s'));
+    
+    // Create default status
+    $defaultStatus = [
+        'active' => false,
+        'message' => 'Checking stream URL for the first time...',
+        'checking' => true,
+        'last_check' => time()
+    ];
+    
+    // Write to status file
+    file_put_contents($statusFile, json_encode($defaultStatus, JSON_PRETTY_PRINT));
+    
+    // Start background check
+    if (PHP_OS_FAMILY === 'Windows') {
+        pclose(popen('start /B php -f stream_monitor_service.php', 'r'));
+    } else {
+        exec('php -f stream_monitor_service.php > /dev/null 2>&1 &');
+    }
+    
+    // Return the initial status
+    echo json_encode($defaultStatus);
     
 } catch (Exception $e) {
+    logStreamCheck("Error in check_stream_url.php: " . $e->getMessage(), 'error');
     echo json_encode([
         'active' => false,
         'message' => 'Error checking stream: ' . $e->getMessage(),
-        'error' => true
+        'error' => true,
+        'timestamp' => time()
     ]);
-}
-exit;
-
-/**
- * Get the current stream status from the status file with no caching
- * 
- * @param bool $forceFresh Force a fresh read from the file
- * @return array Status data
- */
-function getStreamStatus($forceFresh = false) {
-    global $statusFile, $settings;
-    static $cachedStatus = null;
-    static $lastReadTime = 0;
-    
-    // If we have a cached status and we don't need a fresh read, return it
-    if (!$forceFresh && $cachedStatus !== null && (time() - $lastReadTime) < 1) {
-        return $cachedStatus;
-    }
-    
-    // If status file doesn't exist, create a default status
-    if (!file_exists($statusFile)) {
-        $streamUrl = $settings['srt_url'] ?? '';
-        
-        $defaultStatus = [
-            'active' => false,
-            'message' => 'Stream status unknown (never checked)',
-            'last_check' => 0,
-            'next_check' => time(),
-            'check_duration' => 0
-        ];
-        
-        file_put_contents($statusFile, json_encode($defaultStatus, JSON_PRETTY_PRINT));
-        $cachedStatus = $defaultStatus;
-        $lastReadTime = time();
-        return $defaultStatus;
-    }
-    
-    // Clear stat cache to ensure we get fresh file info
-    clearstatcache(true, $statusFile);
-    
-    // Read the status file with shared lock for thread safety
-    $statusJson = file_get_contents($statusFile);
-    $status = json_decode($statusJson, true) ?: [];
-    
-    // Add age information
-    $status['age'] = time() - ($status['last_check'] ?? 0);
-    
-    // Update cache
-    $cachedStatus = $status;
-    $lastReadTime = time();
-    
-    return $status;
 }

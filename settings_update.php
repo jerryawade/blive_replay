@@ -22,6 +22,34 @@ if (!isset($_POST['update_settings'])) {
 try {
     // Initialize components
     $settingsManager = new SettingsManager();
+    $currentSettings = $settingsManager->getSettings();
+    
+    // Check if SRT URL has changed
+    $srtUrlChanged = false;
+    if (isset($_POST['srt_url']) && $_POST['srt_url'] !== $currentSettings['srt_url']) {
+        $srtUrlChanged = true;
+        
+        // Set a session flag to notify check_stream_url.php that the URL has changed
+        $_SESSION['srt_url_changed'] = true;
+        
+        // Log the change
+        $logFile = 'logs/stream_url_check.log';
+        $timestamp = date('Y-m-d H:i:s');
+        $logEntry = "[$timestamp] [info] SRT URL changed from '{$currentSettings['srt_url']}' to '{$_POST['srt_url']}'\n";
+        file_put_contents($logFile, $logEntry, FILE_APPEND);
+        
+        // Remove existing status file to force a fresh check
+        $statusFile = 'json/stream_status.json';
+        if (file_exists($statusFile)) {
+            unlink($statusFile);
+        }
+        
+        // Remove any lock file
+        $lockFile = 'json/stream_check.lock';
+        if (file_exists($lockFile)) {
+            unlink($lockFile);
+        }
+    }
 
     // Process boolean checkboxes
     $booleanSettings = [
@@ -103,7 +131,8 @@ try {
     echo json_encode([
         'success' => true,
         'message' => 'Settings updated successfully',
-        'reload' => $reloadRequired
+        'reload' => $reloadRequired,
+        'srt_url_changed' => $srtUrlChanged
     ]);
 } catch (Exception $e) {
     echo json_encode([
