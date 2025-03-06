@@ -1,5 +1,5 @@
 /**
- * Enhanced Stream Monitor (No Page Refresh)
+ * Enhanced Stream Monitor
  * Updates indicator color and status text without refreshing the page
  */
 class StreamMonitor {
@@ -11,6 +11,9 @@ class StreamMonitor {
         this.checkInProgress = false;
         this.firstCheckDone = false;
         this.statusTextElement = null;
+        this.lastCheckTime = 0;
+        this.pollInterval = null;
+        this.updatesPending = false;
 
         // Debugging flag
         this.debugMode = true;
@@ -39,11 +42,17 @@ class StreamMonitor {
 
         // Setup interval for periodic checks
         this.checkInterval = setInterval(() => this.checkStatus(), 30000); // Every 30 seconds
+        
+        // Setup polling for status updates when a check is in progress
+        this.pollInterval = setInterval(() => this.pollForUpdates(), 1000); // Poll every second
 
         // Clean up on page unload
         window.addEventListener('beforeunload', () => {
             if (this.checkInterval) {
                 clearInterval(this.checkInterval);
+            }
+            if (this.pollInterval) {
+                clearInterval(this.pollInterval);
             }
         });
     }
@@ -119,22 +128,26 @@ class StreamMonitor {
         const tooltip = document.getElementById('stream-status-tooltip');
         if (!tooltip) return;
 
-        const status = this.lastStatus;
-
-        if (status) {
-            let tooltipContent = status.active
-                ? `Stream URL is accessible<br>Click to recheck`
-                : `Stream URL is not accessible<br>Click to recheck`;
+        let tooltipContent = '';
+        
+        if (this.checkInProgress) {
+            tooltipContent = 'Checking stream URL...<br>Click to check again';
+        } else if (this.lastStatus) {
+            tooltipContent = this.lastStatus.active
+                ? `Stream URL is accessible<br>Click to check again`
+                : `Stream URL is not accessible<br>Click to check again`;
 
             // Add time info
-            if (status.last_check) {
-                const lastCheckTime = new Date(status.last_check * 1000).toLocaleTimeString();
+            if (this.lastStatus.last_check) {
+                const lastCheckTime = new Date(this.lastStatus.last_check * 1000).toLocaleTimeString();
                 tooltipContent += `<br>Last checked: ${lastCheckTime}`;
             }
-
-            tooltip.innerHTML = tooltipContent;
-            tooltip.style.display = 'block';
+        } else {
+            tooltipContent = 'Stream status unknown<br>Click to check now';
         }
+
+        tooltip.innerHTML = tooltipContent;
+        tooltip.style.display = 'block';
     }
 
     /**
@@ -165,6 +178,9 @@ class StreamMonitor {
         if (isRecordingActive) {
             // Always show recording in progress during an active recording
             this.statusTextElement.textContent = 'Recording in Progress (DO NOT refresh your browser!)';
+        } else if (this.checkInProgress) {
+            // Show checking status when check is in progress
+            this.statusTextElement.textContent = 'Checking Stream URL...';
         } else {
             // When not recording, show stream status
             if (status) {
@@ -173,7 +189,7 @@ class StreamMonitor {
                     : 'Stream URL Not Accessible';
             } else {
                 // Fallback to generic message if no status
-                this.statusTextElement.textContent = 'Stream URL Not Accessible';
+                this.statusTextElement.textContent = 'Stream Status Unknown';
             }
         }
     }
@@ -184,14 +200,14 @@ class StreamMonitor {
     updateStatusIndicator(status) {
         if (!this.statusIndicator) return;
 
-        this.debug(`Updating status indicator. Raw status: ${JSON.stringify(status)}`);
+        this.debug(`Updating status indicator. Status: ${JSON.stringify(status)}, CheckInProgress: ${this.checkInProgress}`);
 
         // Clear existing styles
         this.statusIndicator.style.animation = 'none';
         this.statusIndicator.classList.remove('status-check', 'status-active', 'status-inactive');
 
         // Checking state
-        if (status && status.checking) {
+        if (this.checkInProgress) {
             this.statusIndicator.style.backgroundColor = '#FFC107'; // Yellow
             this.statusIndicator.style.animation = 'pulse 2s infinite';
             this.statusIndicator.title = 'Checking stream URL...';
@@ -243,33 +259,89 @@ class StreamMonitor {
      * Force a new stream check
      */
     forceCheck() {
-        if (this.checkInProgress) {
-            this.debug('Check already in progress, cannot force new check');
-            return;
-        }
-
         this.debug('Forcing stream status check');
-        this.updateStatusIndicator({ checking: true });
+        
+        // Set checking state even if a check is already in progress
+        this.checkInProgress = true;
+        this.updatesPending = true;
+        
+        // Update UI to show checking state
+        this.updateStatusIndicator();
+        this.updateStatusText();
+        
+        // Start a fresh check
         this.checkStatus(true);
+    }
+
+    /**
+     * Poll for status updates when a check is in progress
+     */
+    pollForUpdates() {
+        // Only poll if a check is in progress or updates are pending
+        if (!this.checkInProgress && !this.updatesPending) return;
+        
+        // Don't poll too frequently
+        const now = Date.now();
+        if (now - this.lastCheckTime < 1000) return;
+        
+        this.lastCheckTime = now;
+        this.debug("Polling for status updates");
+        
+        // Add a timestamp to prevent caching
+        fetch(`check_stream_url.php?t=${now}`, {
+            method: 'GET',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            this.debug(`Poll received data: ${JSON.stringify(data)}`);
+            
+            // If data indicates checking is still in progress, maintain checking state
+            if (data.checking) {
+                this.debug("Still checking according to server");
+                this.checkInProgress = true;
+                return;
+            }
+            
+            // Check is complete, update status
+            this.lastStatus = data;
+            this.checkInProgress = false;
+            this.updatesPending = false;
+            this.updateStatusIndicator(data);
+            this.updateStatusText(data);
+        })
+        .catch(error => {
+            this.debug(`Error polling for updates: ${error.message}`);
+            // Don't change state on error to avoid flickering
+        });
     }
 
     /**
      * Check stream URL status
      */
     async checkStatus(forceCheck = false) {
-        if (this.checkInProgress) return;
+        if (this.checkInProgress && !forceCheck) return;
 
         this.checkInProgress = true;
+        this.updatesPending = true;
         this.debug(`Starting status check. Force check: ${forceCheck}`);
 
+        // Update UI immediately to show checking state
+        this.updateStatusIndicator();
+        this.updateStatusText();
+
         try {
-            this.updateStatusIndicator({ checking: true });
-
             const timestamp = Date.now();
-            const queryParams = forceCheck ? ['force_check=1'] : [];
-            queryParams.push(`t=${timestamp}`);
-
-            const url = `check_stream_url.php?${queryParams.join('&')}`;
+            this.lastCheckTime = timestamp;
+            
+            const queryParams = forceCheck ? 'force_check=1&' : '';
+            const url = `check_stream_url.php?${queryParams}t=${timestamp}`;
 
             this.debug(`Checking stream status at: ${url}`);
 
@@ -289,25 +361,22 @@ class StreamMonitor {
             const result = await response.json();
             this.debug(`Stream status response: ${JSON.stringify(result)}`);
 
-            // Handling checking status
+            // If checking is in progress, leave UI in checking state
             if (result.checking) {
-                this.debug('Stream is being checked, will retry shortly');
-                setTimeout(() => {
-                    this.checkInProgress = false;
-                    this.checkStatus(forceCheck);
-                }, 2000);
+                this.debug('Stream check in progress, will continue polling');
                 return;
             }
 
-            // Update last status
+            // Check is complete, update status
             this.lastStatus = result;
             this.firstCheckDone = true;
+            this.checkInProgress = false;
+            this.updatesPending = false;
 
-            // Update indicator and status text
+            // Update UI with fresh status
             this.updateStatusIndicator(result);
             this.updateStatusText(result);
 
-            this.checkInProgress = false;
             return result;
 
         } catch (error) {
@@ -316,10 +385,10 @@ class StreamMonitor {
             // Reset to a default "not accessible" state on error
             const errorStatus = { active: false, message: 'Error checking stream URL' };
             this.lastStatus = errorStatus;
+            this.checkInProgress = false;
+            this.updatesPending = false;
             this.updateStatusIndicator(errorStatus);
             this.updateStatusText(errorStatus);
-
-            this.checkInProgress = false;
         }
     }
 
@@ -370,6 +439,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Initialize the stream monitor
         setTimeout(() => {
+            // Clean up any existing monitor first
+            if (window.streamMonitor) {
+                if (window.streamMonitor.checkInterval) {
+                    clearInterval(window.streamMonitor.checkInterval);
+                }
+                if (window.streamMonitor.pollInterval) {
+                    clearInterval(window.streamMonitor.pollInterval);
+                }
+            }
+            
             window.streamMonitor = new StreamMonitor();
             window.streamMonitor.init();
         }, 500);
