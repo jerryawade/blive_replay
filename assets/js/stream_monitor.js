@@ -42,7 +42,7 @@ class StreamMonitor {
 
         // Setup interval for periodic checks
         this.checkInterval = setInterval(() => this.checkStatus(), 30000); // Every 30 seconds
-        
+
         // Setup polling for status updates when a check is in progress
         this.pollInterval = setInterval(() => this.pollForUpdates(), 1000); // Poll every second
 
@@ -78,7 +78,7 @@ class StreamMonitor {
 
         this.statusIndicator = document.createElement('div');
         this.statusIndicator.id = 'stream-status-indicator';
-        this.statusIndicator.title = 'Stream URL Status';
+        this.statusIndicator.title = 'Recording URL Status';
         this.statusIndicator.style.cssText = `
             position: fixed;
             bottom: 20px;
@@ -129,13 +129,13 @@ class StreamMonitor {
         if (!tooltip) return;
 
         let tooltipContent = '';
-        
+
         if (this.checkInProgress) {
-            tooltipContent = 'Checking stream URL...<br>Click to check again';
+            tooltipContent = 'Checking recording URL...<br>Click to check again';
         } else if (this.lastStatus) {
             tooltipContent = this.lastStatus.active
-                ? `Stream URL is accessible<br>Click to check again`
-                : `Stream URL is not accessible<br>Click to check again`;
+                ? `Recording URL is accessible<br>Click to check again`
+                : `Recording URL is not accessible<br>Click to check again`;
 
             // Add time info
             if (this.lastStatus.last_check) {
@@ -186,7 +186,7 @@ class StreamMonitor {
             if (status) {
                 this.statusTextElement.textContent = status.active === true
                     ? 'Recording Stopped'
-                    : 'Stream URL Not Accessible';
+                    : 'Recording URL Not Accessible';
             } else {
                 // Fallback to generic message if no status
                 this.statusTextElement.textContent = 'Stream Status Unknown';
@@ -210,7 +210,7 @@ class StreamMonitor {
         if (this.checkInProgress) {
             this.statusIndicator.style.backgroundColor = '#FFC107'; // Yellow
             this.statusIndicator.style.animation = 'pulse 2s infinite';
-            this.statusIndicator.title = 'Checking stream URL...';
+            this.statusIndicator.title = 'Checking recording URL...';
             this.statusIndicator.classList.add('status-check');
             this.forceRedraw(this.statusIndicator);
             return;
@@ -219,7 +219,7 @@ class StreamMonitor {
         // Determine color and status
         let newColor = '#6c757d'; // Default gray
         let className = '';
-        let title = 'Stream URL status unknown';
+        let title = 'Recording URL status unknown';
 
         // Explicit handling of status
         if (status) {
@@ -227,11 +227,11 @@ class StreamMonitor {
             if (status.active === true) {
                 newColor = '#28a745'; // Green
                 className = 'status-active';
-                title = 'Stream URL is accessible';
+                title = 'Recording URL is accessible';
             } else {
                 newColor = '#dc3545'; // Red
                 className = 'status-inactive';
-                title = 'Stream URL is not accessible';
+                title = 'Recording URL is not accessible';
             }
         }
 
@@ -260,15 +260,15 @@ class StreamMonitor {
      */
     forceCheck() {
         this.debug('Forcing stream status check');
-        
+
         // Set checking state even if a check is already in progress
         this.checkInProgress = true;
         this.updatesPending = true;
-        
+
         // Update UI to show checking state
         this.updateStatusIndicator();
         this.updateStatusText();
-        
+
         // Start a fresh check
         this.checkStatus(true);
     }
@@ -279,14 +279,14 @@ class StreamMonitor {
     pollForUpdates() {
         // Only poll if a check is in progress or updates are pending
         if (!this.checkInProgress && !this.updatesPending) return;
-        
+
         // Don't poll too frequently
         const now = Date.now();
         if (now - this.lastCheckTime < 1000) return;
-        
+
         this.lastCheckTime = now;
         this.debug("Polling for status updates");
-        
+
         // Add a timestamp to prevent caching
         fetch(`check_stream_url.php?t=${now}`, {
             method: 'GET',
@@ -295,31 +295,36 @@ class StreamMonitor {
                 'Pragma': 'no-cache'
             }
         })
-        .then(response => {
-            if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-            return response.json();
-        })
-        .then(data => {
-            this.debug(`Poll received data: ${JSON.stringify(data)}`);
-            
-            // If data indicates checking is still in progress, maintain checking state
-            if (data.checking) {
-                this.debug("Still checking according to server");
-                this.checkInProgress = true;
-                return;
-            }
-            
-            // Check is complete, update status
-            this.lastStatus = data;
-            this.checkInProgress = false;
-            this.updatesPending = false;
-            this.updateStatusIndicator(data);
-            this.updateStatusText(data);
-        })
-        .catch(error => {
-            this.debug(`Error polling for updates: ${error.message}`);
-            // Don't change state on error to avoid flickering
-        });
+            .then(response => {
+                if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                this.debug(`Poll received data: ${JSON.stringify(data)}`);
+
+                // Validate the data object
+                if (!data || typeof data.active === 'undefined') {
+                    throw new Error('Invalid response from server');
+                }
+
+                // If data indicates checking is still in progress, maintain checking state
+                if (data.checking) {
+                    this.debug("Still checking according to server");
+                    this.checkInProgress = true;
+                    return;
+                }
+
+                // Check is complete, update status
+                this.lastStatus = data;
+                this.checkInProgress = false;
+                this.updatesPending = false;
+                this.updateStatusIndicator(data);
+                this.updateStatusText(data);
+            })
+            .catch(error => {
+                this.debug(`Error polling for updates: ${error.message}`);
+                // Don't change state on error to avoid flickering
+            });
     }
 
     /**
@@ -339,7 +344,7 @@ class StreamMonitor {
         try {
             const timestamp = Date.now();
             this.lastCheckTime = timestamp;
-            
+
             const queryParams = forceCheck ? 'force_check=1&' : '';
             const url = `check_stream_url.php?${queryParams}t=${timestamp}`;
 
@@ -360,6 +365,11 @@ class StreamMonitor {
 
             const result = await response.json();
             this.debug(`Stream status response: ${JSON.stringify(result)}`);
+
+            // Validate the result object
+            if (!result || typeof result.active === 'undefined') {
+                throw new Error('Invalid response from server');
+            }
 
             // If checking is in progress, leave UI in checking state
             if (result.checking) {
@@ -383,7 +393,7 @@ class StreamMonitor {
             this.debug(`Error checking stream status: ${error.message}`);
 
             // Reset to a default "not accessible" state on error
-            const errorStatus = { active: false, message: 'Error checking stream URL' };
+            const errorStatus = { active: false, message: 'Error checking recording URL' };
             this.lastStatus = errorStatus;
             this.checkInProgress = false;
             this.updatesPending = false;
@@ -448,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     clearInterval(window.streamMonitor.pollInterval);
                 }
             }
-            
+
             window.streamMonitor = new StreamMonitor();
             window.streamMonitor.init();
         }, 500);
