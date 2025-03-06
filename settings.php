@@ -81,6 +81,7 @@ function renderSettingsModal($settings)
 {
     ob_start();
     ?>
+    <!-- Settings Modal with Tabs -->
     <div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -99,13 +100,43 @@ function renderSettingsModal($settings)
                 </div>
                 <div class="modal-body" style="height: calc(100vh - 250px); overflow-y: auto;">
                     <form id="settingsForm">
-                        <div class="container-fluid px-0">
-                            <!-- Server Configuration Section -->
-                            <div class="mb-4">
-                                <h6 class="mb-3 fw-bold">
-                                    <i class="bi bi-hdd-network me-2"></i>
-                                    Server Configuration
-                                </h6>
+                        <!-- Settings Navigation Tabs -->
+                        <ul class="nav nav-tabs mb-3" id="settingsTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="server-tab" data-bs-toggle="tab"
+                                        data-bs-target="#server-config" type="button" role="tab"
+                                        aria-controls="server-config" aria-selected="true">
+                                    <i class="bi bi-server me-1"></i> Server Configuration
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="permissions-tab" data-bs-toggle="tab"
+                                        data-bs-target="#permissions-config" type="button" role="tab"
+                                        aria-controls="permissions-config" aria-selected="false">
+                                    <i class="bi bi-shield-lock me-1"></i> Permissions
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="scheduler-tab" data-bs-toggle="tab"
+                                        data-bs-target="#scheduler-config" type="button" role="tab"
+                                        aria-controls="scheduler-config" aria-selected="false">
+                                    <i class="bi bi-calendar-event me-1"></i> Scheduler
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="downloads-tab" data-bs-toggle="tab"
+                                        data-bs-target="#downloads-config" type="button" role="tab"
+                                        aria-controls="downloads-config" aria-selected="false">
+                                    <i class="bi bi-download me-1"></i> Downloads
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- Tab Content -->
+                        <div class="tab-content" id="settingsTabContent">
+                            <!-- Server Configuration Tab -->
+                            <div class="tab-pane fade show active" id="server-config" role="tabpanel"
+                                 aria-labelledby="server-tab">
                                 <div class="mb-3">
                                     <label for="timezone" class="form-label">System Timezone</label>
                                     <div class="input-group">
@@ -178,281 +209,365 @@ function renderSettingsModal($settings)
                                 </div>
                             </div>
 
-                            <!-- Landing Page Options Section -->
-                            <div class="mb-4">
-                                <h6 class="mb-3 fw-bold">
-                                    <i class="bi bi-house-door me-2"></i>
-                                    Landing Page Options
-                                </h6>
-                                <div class="mb-2">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="show_recordings"
-                                               name="show_recordings"
-                                            <?php echo isset($settings['show_recordings']) && $settings['show_recordings'] ? 'checked' : ''; ?>>
-                                        <label class="form-check-label" for="show_recordings">
-                                            <i class="bi bi-collection-play me-2"></i>
-                                            Show Recordings link
-                                        </label>
+                            <!-- Permissions Tab -->
+                            <div class="tab-pane fade" id="permissions-config" role="tabpanel"
+                                 aria-labelledby="permissions-tab">
+                                <!-- Landing Page Options Section -->
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <i class="bi bi-house-door me-2"></i>
+                                        Landing Page Options
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-2">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" id="show_recordings"
+                                                       name="show_recordings"
+                                                    <?php echo isset($settings['show_recordings']) && $settings['show_recordings'] ? 'checked' : ''; ?>>
+                                                <label class="form-check-label" for="show_recordings">
+                                                    <i class="bi bi-collection-play me-2"></i>
+                                                    Show Recordings link
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" id="show_livestream"
+                                                       name="show_livestream"
+                                                    <?php echo isset($settings['show_livestream']) && $settings['show_livestream'] ? 'checked' : ''; ?>>
+                                                <label class="form-check-label" for="show_livestream">
+                                                    <i class="bi bi-broadcast me-2"></i>
+                                                    Show Live Stream link
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="mb-2">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="show_livestream"
-                                               name="show_livestream"
-                                            <?php echo isset($settings['show_livestream']) && $settings['show_livestream'] ? 'checked' : ''; ?>>
-                                        <label class="form-check-label" for="show_livestream">
-                                            <i class="bi bi-broadcast me-2"></i>
-                                            Show Live Stream link
-                                        </label>
+
+                                <!-- RePlay Permissions Section -->
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="bi bi-shield-lock me-2"></i>
+                                        RePlay Permissions
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-2">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" id="allow_vlc"
+                                                       name="allow_vlc"
+                                                    <?php echo isset($settings['allow_vlc']) && $settings['allow_vlc'] ? 'checked' : ''; ?>>
+                                                <label class="form-check-label" for="allow_vlc">
+                                                    <i class="bi bi-play-circle me-2"></i>
+                                                    Allow viewers to play recordings in VLC
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" id="allow_m3u"
+                                                       name="allow_m3u"
+                                                    <?php echo isset($settings['allow_m3u']) && $settings['allow_m3u'] ? 'checked' : ''; ?>>
+                                                <label class="form-check-label" for="allow_m3u">
+                                                    <i class="bi bi-file-earmark-play me-2"></i>
+                                                    Allow viewers to download M3U playlists
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" id="allow_mp4"
+                                                       name="allow_mp4"
+                                                    <?php echo isset($settings['allow_mp4']) && $settings['allow_mp4'] ? 'checked' : ''; ?>>
+                                                <label class="form-check-label" for="allow_mp4">
+                                                    <i class="bi bi-download me-2"></i>
+                                                    Allow viewers to download MP4 files
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- RePlay Permissions Section -->
-                            <div class="mb-4">
-                                <h6 class="mb-3 fw-bold">
-                                    <i class="bi bi-shield-lock me-2"></i>
-                                    RePlay Permissions
-                                </h6>
-                                <div class="mb-2">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="allow_vlc" name="allow_vlc"
-                                            <?php echo isset($settings['allow_vlc']) && $settings['allow_vlc'] ? 'checked' : ''; ?>>
-                                        <label class="form-check-label" for="allow_vlc">
-                                            <i class="bi bi-play-circle me-2"></i>
-                                            Allow viewers to play recordings in VLC
-                                        </label>
+                            <!-- Scheduler Tab -->
+                            <div class="tab-pane fade" id="scheduler-config" role="tabpanel"
+                                 aria-labelledby="scheduler-tab">
+                                <!-- Scheduler Settings Section -->
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <i class="bi bi-calendar-check me-2"></i>
+                                        Recording Scheduler
                                     </div>
-                                </div>
-                                <div class="mb-2">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="allow_m3u" name="allow_m3u"
-                                            <?php echo isset($settings['allow_m3u']) && $settings['allow_m3u'] ? 'checked' : ''; ?>>
-                                        <label class="form-check-label" for="allow_m3u">
-                                            <i class="bi bi-file-earmark-play me-2"></i>
-                                            Allow viewers to download M3U playlists
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="mb-2">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="allow_mp4" name="allow_mp4"
-                                            <?php echo isset($settings['allow_mp4']) && $settings['allow_mp4'] ? 'checked' : ''; ?>>
-                                        <label class="form-check-label" for="allow_mp4">
-                                            <i class="bi bi-download me-2"></i>
-                                            Allow viewers to download MP4 files
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Scheduler Settings Section -->
-                            <div class="mb-4">
-                                <h6 class="mb-3 fw-bold">
-                                    <i class="bi bi-calendar-check me-2"></i>
-                                    Recording Scheduler
-                                </h6>
-                                <div class="mb-2">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="enable_scheduler"
-                                               name="enable_scheduler"
-                                            <?php echo isset($settings['enable_scheduler']) && $settings['enable_scheduler'] ? 'checked' : ''; ?>>
-                                        <label class="form-check-label" for="enable_scheduler">
-                                            <i class="bi bi-stopwatch me-2"></i>
-                                            Enable automatic scheduled recordings
-                                        </label>
-                                    </div>
-                                    <small class="text-muted">When enabled, recordings will automatically start and stop
-                                        based on your defined schedules.</small>
-                                </div>
-                                <div class="mb-2">
-                                    <button type="button" class="btn btn-outline-primary btn-sm icon-btn"
-                                            id="manageSchedulesBtn"
-                                            data-bs-dismiss="modal" onclick="showSchedulesModal()">
-                                        <i class="bi bi-calendar-plus"></i>
-                                        Manage Recording Schedules
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Email Notification Settings Section -->
-                            <div class="mb-4">
-                                <h6 class="mb-3 fw-bold">
-                                    <i class="bi bi-envelope me-2"></i>
-                                    Email Notification Settings
-                                </h6>
-                                <div class="mb-2">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="email_notifications_enabled"
-                                               name="email_notifications_enabled"
-                                            <?php echo isset($settings['email_notifications_enabled']) && $settings['email_notifications_enabled'] ? 'checked' : ''; ?>>
-                                        <label class="form-check-label" for="email_notifications_enabled">
-                                            <i class="bi bi-bell me-2"></i>
-                                            Enable email notifications
-                                        </label>
-                                    </div>
-                                    <small class="text-muted">When enabled, notifications will be sent for scheduled
-                                        recording events.</small>
-                                </div>
-
-                                <div id="smtp_settings_container" class="border rounded p-3 mt-3"
-                                     style="display: <?php echo isset($settings['email_notifications_enabled']) && $settings['email_notifications_enabled'] ? 'block' : 'none'; ?>;">
-                                    <div class="mb-3">
-                                        <label for="scheduler_notification_email" class="form-label">Notification
-                                            Email</label>
-                                        <div class="input-group">
-                                        <span class="input-group-text">
-                                            <i class="bi bi-envelope-at"></i>
-                                        </span>
-                                            <input type="email" class="form-control" id="scheduler_notification_email"
-                                                   name="scheduler_notification_email"
-                                                   value="<?php echo htmlspecialchars($settings['scheduler_notification_email'] ?? ''); ?>"
-                                                   placeholder="notifications@example.com">
-                                        </div>
-                                        <small class="text-muted">Email address to receive notifications about scheduled
-                                            recordings</small>
-                                    </div>
-                                    <div class="row mb-3">
-                                        <div class="col-md-6">
-                                            <label for="smtp_host" class="form-label">SMTP Server</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">
-                                                    <i class="bi bi-server"></i>
-                                                </span>
-                                                <input type="text" class="form-control" id="smtp_host" name="smtp_host"
-                                                       value="<?php echo htmlspecialchars($settings['smtp_host'] ?? ''); ?>"
-                                                       placeholder="smtp.gmail.com">
+                                    <div class="card-body">
+                                        <div class="mb-2">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" id="enable_scheduler"
+                                                       name="enable_scheduler"
+                                                    <?php echo isset($settings['enable_scheduler']) && $settings['enable_scheduler'] ? 'checked' : ''; ?>>
+                                                <label class="form-check-label" for="enable_scheduler">
+                                                    <i class="bi bi-stopwatch me-2"></i>
+                                                    Enable automatic scheduled recordings
+                                                </label>
                                             </div>
-                                            <small class="text-muted">e.g., smtp.gmail.com, smtp.office365.com</small>
+                                            <small class="text-muted">When enabled, recordings will automatically start
+                                                and stop
+                                                based on your defined schedules.</small>
                                         </div>
-                                        <div class="col-md-6">
-                                            <label for="smtp_port" class="form-label">SMTP Port</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">
-                                                    <i class="bi bi-hdd-network"></i>
-                                                </span>
-                                                <input type="text" class="form-control" id="smtp_port" name="smtp_port"
-                                                       value="<?php echo htmlspecialchars($settings['smtp_port'] ?? '587'); ?>"
-                                                       placeholder="587">
-                                            </div>
-                                            <small class="text-muted">587 (TLS), 465 (SSL), or 25 (non-secure)</small>
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="smtp_security" class="form-label">Connection Security</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text">
-                                                <i class="bi bi-shield-lock"></i>
-                                            </span>
-                                            <select class="form-select" id="smtp_security" name="smtp_security">
-                                                <option value="tls" <?php echo (isset($settings['smtp_security']) && $settings['smtp_security'] === 'tls') ? 'selected' : ''; ?>>
-                                                    TLS
-                                                </option>
-                                                <option value="ssl" <?php echo (isset($settings['smtp_security']) && $settings['smtp_security'] === 'ssl') ? 'selected' : ''; ?>>
-                                                    SSL
-                                                </option>
-                                                <option value="none" <?php echo (isset($settings['smtp_security']) && $settings['smtp_security'] === 'none') ? 'selected' : ''; ?>>
-                                                    None
-                                                </option>
-                                            </select>
-                                        </div>
-                                        <small class="text-muted">TLS is recommended for most providers</small>
-                                    </div>
-
-                                    <div class="row mb-3">
-                                        <div class="col-md-6">
-                                            <label for="smtp_username" class="form-label">SMTP Username</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">
-                                                    <i class="bi bi-person"></i>
-                                                </span>
-                                                <input type="text" class="form-control" id="smtp_username"
-                                                       name="smtp_username"
-                                                       value="<?php echo htmlspecialchars($settings['smtp_username'] ?? ''); ?>"
-                                                       placeholder="user@example.com">
-                                            </div>
-                                            <small class="text-muted">Usually your email address</small>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="smtp_password" class="form-label">SMTP Password</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">
-                                                    <i class="bi bi-key"></i>
-                                                </span>
-                                                <input type="password" class="form-control" id="smtp_password"
-                                                       name="smtp_password"
-                                                       value="<?php echo htmlspecialchars($settings['smtp_password'] ?? ''); ?>"
-                                                       placeholder="Password or App Password">
-                                                <button class="btn btn-outline-secondary toggle-password" type="button">
-                                                    <i class="bi bi-eye"></i>
-                                                </button>
-                                            </div>
-                                            <small class="text-muted">Use app password for Gmail or services with
-                                                2FA</small>
-                                        </div>
-                                    </div>
-
-                                    <div class="row mb-3">
-                                        <div class="col-md-6">
-                                            <label for="smtp_from_email" class="form-label">From Email</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">
-                                                    <i class="bi bi-at"></i>
-                                                </span>
-                                                <input type="email" class="form-control" id="smtp_from_email"
-                                                       name="smtp_from_email"
-                                                       value="<?php echo htmlspecialchars($settings['smtp_from_email'] ?? ''); ?>"
-                                                       placeholder="replay@yourdomain.com">
-                                            </div>
-                                            <small class="text-muted">Must be authorized by your SMTP provider</small>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="smtp_from_name" class="form-label">From Name</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">
-                                                    <i class="bi bi-person-badge"></i>
-                                                </span>
-                                                <input type="text" class="form-control" id="smtp_from_name"
-                                                       name="smtp_from_name"
-                                                       value="<?php echo htmlspecialchars($settings['smtp_from_name'] ?? 'RePlay System'); ?>"
-                                                       placeholder="RePlay System">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="alert alert-info">
-                                        <i class="bi bi-info-circle me-2"></i>
-                                        <strong>Gmail Users:</strong> You'll need to use an "App Password" if you have
-                                        2-factor authentication enabled.
-                                        <a href="https://support.google.com/accounts/answer/185833" target="_blank"
-                                           class="alert-link">
-                                            Learn how to create an App Password
-                                        </a>
-                                    </div>
-
-                                    <!-- Test email section with inline notification -->
-                                    <div class="mt-3 border-top pt-3">
-                                        <div class="d-flex align-items-center justify-content-between">
-                                            <div>
-                                                <h6 class="mb-0">Test Email Configuration</h6>
-                                                <p class="text-muted small mb-0">Verify your email settings by sending a
-                                                    test email</p>
-                                            </div>
+                                        <div class="mb-2">
                                             <button type="button" class="btn btn-outline-primary btn-sm icon-btn"
-                                                    id="testEmailButton">
-                                                <i class="bi bi-envelope-check"></i>
-                                                Send Test Email
+                                                    id="manageSchedulesBtn"
+                                                    data-bs-dismiss="modal" onclick="showSchedulesModal()">
+                                                <i class="bi bi-calendar-plus"></i>
+                                                Manage Recording Schedules
                                             </button>
                                         </div>
+                                    </div>
+                                </div>
 
-                                        <!-- Test email notification area (hidden by default) -->
-                                        <div id="emailTestNotification" class="mt-2" style="display: none;">
-                                            <!-- Content will be dynamically generated -->
+                                <!-- Email Notification Settings Section -->
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="bi bi-envelope me-2"></i>
+                                        Email Notification Settings
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-2">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input"
+                                                       id="email_notifications_enabled"
+                                                       name="email_notifications_enabled"
+                                                    <?php echo isset($settings['email_notifications_enabled']) && $settings['email_notifications_enabled'] ? 'checked' : ''; ?>>
+                                                <label class="form-check-label" for="email_notifications_enabled">
+                                                    <i class="bi bi-bell me-2"></i>
+                                                    Enable email notifications
+                                                </label>
+                                            </div>
+                                            <small class="text-muted">When enabled, notifications will be sent for
+                                                scheduled
+                                                recording events.</small>
+                                        </div>
+
+                                        <div id="smtp_settings_container" class="border rounded p-3 mt-3"
+                                             style="display: <?php echo isset($settings['email_notifications_enabled']) && $settings['email_notifications_enabled'] ? 'block' : 'none'; ?>;">
+                                            <div class="mb-3">
+                                                <label for="scheduler_notification_email" class="form-label">Notification
+                                                    Email</label>
+                                                <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="bi bi-envelope-at"></i>
+                                                </span>
+                                                    <input type="email" class="form-control"
+                                                           id="scheduler_notification_email"
+                                                           name="scheduler_notification_email"
+                                                           value="<?php echo htmlspecialchars($settings['scheduler_notification_email'] ?? ''); ?>"
+                                                           placeholder="notifications@example.com">
+                                                </div>
+                                                <small class="text-muted">Email address to receive notifications about
+                                                    scheduled
+                                                    recordings</small>
+                                            </div>
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <label for="smtp_host" class="form-label">SMTP Server</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">
+                                                            <i class="bi bi-server"></i>
+                                                        </span>
+                                                        <input type="text" class="form-control" id="smtp_host"
+                                                               name="smtp_host"
+                                                               value="<?php echo htmlspecialchars($settings['smtp_host'] ?? ''); ?>"
+                                                               placeholder="smtp.gmail.com">
+                                                    </div>
+                                                    <small class="text-muted">e.g., smtp.gmail.com,
+                                                        smtp.office365.com</small>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="smtp_port" class="form-label">SMTP Port</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">
+                                                            <i class="bi bi-hdd-network"></i>
+                                                        </span>
+                                                        <input type="text" class="form-control" id="smtp_port"
+                                                               name="smtp_port"
+                                                               value="<?php echo htmlspecialchars($settings['smtp_port'] ?? '587'); ?>"
+                                                               placeholder="587">
+                                                    </div>
+                                                    <small class="text-muted">587 (TLS), 465 (SSL), or 25
+                                                        (non-secure)</small>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label for="smtp_security" class="form-label">Connection
+                                                    Security</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text">
+                                                        <i class="bi bi-shield-lock"></i>
+                                                    </span>
+                                                    <select class="form-select" id="smtp_security" name="smtp_security">
+                                                        <option value="tls" <?php echo (isset($settings['smtp_security']) && $settings['smtp_security'] === 'tls') ? 'selected' : ''; ?>>
+                                                            TLS
+                                                        </option>
+                                                        <option value="ssl" <?php echo (isset($settings['smtp_security']) && $settings['smtp_security'] === 'ssl') ? 'selected' : ''; ?>>
+                                                            SSL
+                                                        </option>
+                                                        <option value="none" <?php echo (isset($settings['smtp_security']) && $settings['smtp_security'] === 'none') ? 'selected' : ''; ?>>
+                                                            None
+                                                        </option>
+                                                    </select>
+                                                </div>
+                                                <small class="text-muted">TLS is recommended for most providers</small>
+                                            </div>
+
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <label for="smtp_username" class="form-label">SMTP Username</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">
+                                                            <i class="bi bi-person"></i>
+                                                        </span>
+                                                        <input type="text" class="form-control" id="smtp_username"
+                                                               name="smtp_username"
+                                                               value="<?php echo htmlspecialchars($settings['smtp_username'] ?? ''); ?>"
+                                                               placeholder="user@example.com">
+                                                    </div>
+                                                    <small class="text-muted">Usually your email address</small>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="smtp_password" class="form-label">SMTP Password</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">
+                                                            <i class="bi bi-key"></i>
+                                                        </span>
+                                                        <input type="password" class="form-control" id="smtp_password"
+                                                               name="smtp_password"
+                                                               value="<?php echo htmlspecialchars($settings['smtp_password'] ?? ''); ?>"
+                                                               placeholder="Password or App Password">
+                                                        <button class="btn btn-outline-secondary toggle-password"
+                                                                type="button">
+                                                            <i class="bi bi-eye"></i>
+                                                        </button>
+                                                    </div>
+                                                    <small class="text-muted">Use app password for Gmail or services
+                                                        with
+                                                        2FA</small>
+                                                </div>
+                                            </div>
+
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <label for="smtp_from_email" class="form-label">From Email</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">
+                                                            <i class="bi bi-at"></i>
+                                                        </span>
+                                                        <input type="email" class="form-control" id="smtp_from_email"
+                                                               name="smtp_from_email"
+                                                               value="<?php echo htmlspecialchars($settings['smtp_from_email'] ?? ''); ?>"
+                                                               placeholder="replay@yourdomain.com">
+                                                    </div>
+                                                    <small class="text-muted">Must be authorized by your SMTP
+                                                        provider</small>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="smtp_from_name" class="form-label">From Name</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">
+                                                            <i class="bi bi-person-badge"></i>
+                                                        </span>
+                                                        <input type="text" class="form-control" id="smtp_from_name"
+                                                               name="smtp_from_name"
+                                                               value="<?php echo htmlspecialchars($settings['smtp_from_name'] ?? 'RePlay System'); ?>"
+                                                               placeholder="RePlay System">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="alert alert-info">
+                                                <i class="bi bi-info-circle me-2"></i>
+                                                <strong>Gmail Users:</strong> You'll need to use an "App Password" if
+                                                you have
+                                                2-factor authentication enabled.
+                                                <a href="https://support.google.com/accounts/answer/185833"
+                                                   target="_blank"
+                                                   class="alert-link">
+                                                    Learn how to create an App Password
+                                                </a>
+                                            </div>
+
+                                            <!-- Test email section with inline notification -->
+                                            <div class="mt-3 border-top pt-3">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <div>
+                                                        <h6 class="mb-0">Test Email Configuration</h6>
+                                                        <p class="text-muted small mb-0">Verify your email settings by
+                                                            sending a
+                                                            test email</p>
+                                                    </div>
+                                                    <button type="button"
+                                                            class="btn btn-outline-primary btn-sm icon-btn"
+                                                            id="testEmailButton">
+                                                        <i class="bi bi-envelope-check"></i>
+                                                        Send Test Email
+                                                    </button>
+                                                </div>
+
+                                                <!-- Test email notification area (hidden by default) -->
+                                                <div id="emailTestNotification" class="mt-2" style="display: none;">
+                                                    <!-- Content will be dynamically generated -->
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="tab-pane fade" id="downloads-config" role="tabpanel">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="bi bi-download me-2"></i>
+                                        VLC Handlers
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h5><i class="bi bi-apple me-2"></i>Mac VLC Handler</h5>
+                                                <a href="vlc_handlers/mac_vlc_handler.zip" class="btn btn-outline-primary icon-btn mb-3">
+                                                    <i class="bi bi-cloud-download me-2"></i>
+                                                    Download Mac VLC Handler
+                                                </a>
+                                                <p class="text-muted">
+                                                    This VLC handler enables seamless integration with the BLIVE RePlay system on macOS.
+                                                    After downloading, unzip the file and run <b>./build.sh --install</b> from a terminal.
+                                                    If it doesn't work, try running chmod +x build.sh first.
+                                                </p>
+                                                <ul class="small text-muted">
+                                                    <li>Compatible with macOS 10.14+ (Mojave and later)</li>
+                                                    <li>Requires VLC media player 3.0 or newer</li>
+                                                    <li>Supports live stream and one-click playback from BLIVE RePlay</li>
+                                                </ul>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h5><i class="bi bi-windows me-2"></i>Windows VLC Handler</h5>
+                                                <a href="vlc_handlers/windows_vlc_handler.zip" class="btn btn-outline-primary icon-btn mb-3">
+                                                    <i class="bi bi-cloud-download me-2"></i>
+                                                    Download Windows VLC Handler
+                                                </a>
+                                                <p class="text-muted">
+                                                    This VLC handler enables seamless integration with the BLIVE RePlay system on Windows.
+                                                    Download and unzip the file within the <b>C:\Program Files\VideoLAN\VLC\ folder.
+                                                    Run the install.bat file.</b>
+                                                </p>
+                                                <ul class="small text-muted">
+                                                    <li>Compatible with Windows 10 and 11</li>
+                                                    <li>Requires VLC media player 3.0 or newer</li>
+                                                    <li>Supports live stream and one-click playback from BLIVE RePlay</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     </form>
                 </div>
@@ -583,12 +698,11 @@ function renderSettingsModal($settings)
                             })
                             .catch(error => {
                                 showEmailTestResult(false, error.message || 'Error communicating with the server');
-                            })
-                            .finally(() => {
-                                // Reset button state
-                                testEmailButton.innerHTML = '<i class="bi bi-envelope-check"></i> Send Test Email';
-                                testEmailButton.disabled = false;
-                            });
+                            }).finally(() => {
+                            // Reset button state
+                            testEmailButton.innerHTML = '<i class="bi bi-envelope-check"></i> Send Test Email';
+                            testEmailButton.disabled = false;
+                        });
                     });
                 }
 
@@ -671,8 +785,8 @@ function handleSettingsUpdate($settingsManager)
 
 function renderAboutModal()
 {
-    $version = "1.2.0"; // Update this version number as needed
-    $buildDate = "February 2025";
+    $version = "1.5.0"; // Update this version number as needed
+    $buildDate = "March 2025";
 
     ob_start();
     ?>
