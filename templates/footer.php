@@ -146,6 +146,7 @@
 
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script src="recordings_update.js"></script>
 
 <?php if (isAdmin() && isset($settings['enable_scheduler']) && $settings['enable_scheduler']): ?>
 <!-- This script inclusion should be handled by index.php instead of hardcoded here -->

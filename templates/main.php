@@ -1,5 +1,5 @@
 <?php
-// Get recording note function
+// Function to get recording notes with cleanup
 function getRecordingNote($fileName)
 {
     $notesFile = 'json/recording_notes.json';
@@ -64,148 +64,197 @@ if (isAdmin()): ?>
 
 <?php if (isAuthenticated()): ?>
     <h2 class="mt-4">Recordings:</h2>
-    <div class="list-group">
-        <?php if (!empty($recordings)): ?>
-            <?php
-            $currentRecording = file_exists('current_recording.txt') ? file_get_contents('current_recording.txt') : '';
-            foreach ($recordings as $file):
-                $fileName = basename($file);
-                $thumbnailFile = $thumbnailsDir . '/' . pathinfo($fileName, PATHINFO_FILENAME) . '.jpg';
-                generateThumbnail($file, $thumbnailFile);
-                $fileSize = filesize($file);
-                $fileSizeFormatted = $fileSize > 1024 * 1024 * 1024
-                    ? number_format($fileSize / (1024 * 1024 * 1024), 2) . ' GB'
-                    : number_format($fileSize / (1024 * 1024), 2) . ' MB';
-                $fileDate = date('Y-m-d H:i:s', filemtime($file));
-                $isCurrentlyRecording = ($file === $currentRecording);
-                ?>
-                <div class="list-group-item">
-                    <div class="d-flex align-items-center flex-wrap gap-2">
-                        <div class="thumbnail-container">
-                            <img src="<?php
-                            echo $isCurrentlyRecording
-                                ? 'assets/imgs/recording.png'
-                                : (file_exists($thumbnailFile)
-                                    ? $thumbnailFile . '?t=' . filemtime($thumbnailFile)
-                                    : 'default-thumbnail.jpg'); ?>"
-                                 alt="<?php echo $isCurrentlyRecording ? 'Recording in Progress' : 'Thumbnail'; ?>">
-                        </div>
-                        <div class="flex-grow-1">
-                            <h5 class="mb-1">
-                                <?php echo htmlspecialchars($fileName); ?>
-                                <?php if ($isCurrentlyRecording): ?>
-                                    <span class="badge bg-danger">Recording in Progress</span>
-                                <?php endif; ?>
-                            </h5>
-                            <p class="mb-1">Size: <?php echo $fileSizeFormatted; ?></p>
-                            <small class="text-muted">
-                                Recorded: <?php echo $fileDate; ?><br>
-                                Duration: <?php echo $isCurrentlyRecording ? 'Recording...' : getVideoDuration($file); ?>
-                                <?php
-                                $note = getRecordingNote($file);
-                                if (!empty($note)): ?>
-                                    <br>Note: <span class="recording-note"><?php echo htmlspecialchars($note); ?></span>
-                                <?php endif; ?>
-                            </small>
-                        </div>
-                        <div class="d-flex align-items-center flex-wrap gap-2 mt-2">
-                            <!-- Only show Add/Edit Note button if not recording -->
-                            <?php if (!$isCurrentlyRecording && isAdmin() && !$recordingActive): ?>
-                                <button class="btn btn-info btn-sm icon-btn me-2"
-                                        onclick="toggleNoteForm('<?php echo preg_replace('/[^a-zA-Z0-9]/', '_', $fileName); ?>')"
-                                        type="button">
-                                    <i class="bi bi-pencil-square"></i>
-                                    <?php echo empty(getRecordingNote($file)) ? 'Add Note' : 'Edit Note'; ?>
-                                </button>
-                            <?php endif; ?>
 
-                            <?php if (!$isCurrentlyRecording): ?>
-                                <?php if (isAdmin() || (isset($settings['allow_vlc']) && $settings['allow_vlc'])): ?>
-                                    <a href="<?php echo generateVLCUrl($file); ?>"
-                                       onclick="logVLCPlay(event, '<?php echo htmlspecialchars($fileName); ?>')"
-                                       class="btn btn-primary btn-sm icon-btn me-2">
-                                        <i class="bi bi-play-circle"></i>
-                                        Play Video
-                                    </a>
-                                <?php endif; ?>
+    <?php if (!empty($recordings)): ?>
+        <?php
+        // Group recordings by date and sort
+        $groupedRecordings = [];
+        $currentRecording = file_exists('current_recording.txt') ? file_get_contents('current_recording.txt') : '';
 
-                                <?php if (isAdmin() || (isset($settings['allow_m3u']) && $settings['allow_m3u'])): ?>
-                                    <a href="?getm3u=<?php echo urlencode($fileName); ?>"
-                                       class="btn btn-secondary btn-sm icon-btn me-2">
-                                        <i class="bi bi-file-earmark-play"></i>
-                                        Download M3U
-                                    </a>
-                                <?php endif; ?>
+        // Group recordings by date
+        foreach ($recordings as $file) {
+            // Get the file's modification date
+            $fileDate = date('Y-m-d', filemtime($file));
 
-                                <?php if (isAdmin() || (isset($settings['allow_mp4']) && $settings['allow_mp4'])): ?>
-                                    <a href="?download=<?php echo urlencode($fileName); ?>"
-                                       class="btn btn-success btn-sm icon-btn me-2">
-                                        <i class="bi bi-download"></i>
-                                        Download MP4
-                                    </a>
-                                <?php endif; ?>
+            // If not already in the group, create a new group
+            if (!isset($groupedRecordings[$fileDate])) {
+                $groupedRecordings[$fileDate] = [];
+            }
 
-                                <?php if (isAdmin() && !$recordingActive): ?>
-                                    <button class="btn btn-danger btn-sm icon-btn me-2"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deleteModal"
-                                            data-file="<?php echo urlencode($file); ?>">
-                                        <i class="bi bi-trash"></i>
-                                        Delete
-                                    </button>
-                                <?php endif; ?>
-                            <?php endif; ?>
-                        </div>
-                        <!-- Only show note form if not recording -->
-                        <?php if (isAdmin() && !$isCurrentlyRecording && !$recordingActive): ?>
-                            <div id="noteForm_<?php echo preg_replace('/[^a-zA-Z0-9]/', '_', $fileName); ?>"
-                                 class="mt-2 w-100 border-top pt-2" style="display: none;">
-                                <form class="d-flex gap-2" onsubmit="handleNoteSubmit(event, this); return false;">
-                                    <input type="hidden" name="recording_file"
-                                           value="<?php echo htmlspecialchars($file); ?>">
-                                    <div class="character-count text-muted">
-                                        <small><span>0</span>/50</small>
+            // Add the file to its date group
+            $groupedRecordings[$fileDate][] = $file;
+        }
+
+        // Sort date groups in descending order (newest first)
+        krsort($groupedRecordings);
+
+        // Iterate through grouped and sorted recordings
+        foreach ($groupedRecordings as $date => $dateRecordings):
+            // Sort recordings within each date group by modification time (newest first)
+            usort($dateRecordings, function($a, $b) {
+                return filemtime($b) - filemtime($a);
+            });
+            ?>
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-calendar-event me-2"></i>
+                    <?php
+                    // Format the date nicely
+                    $formattedDate = date('l, F j, Y', strtotime($date));
+                    echo htmlspecialchars($formattedDate);
+                    ?>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <?php foreach ($dateRecordings as $file):
+                            $fileName = basename($file);
+                            $thumbnailFile = $thumbnailsDir . '/' . pathinfo($fileName, PATHINFO_FILENAME) . '.jpg';
+                            generateThumbnail($file, $thumbnailFile);
+                            $fileSize = filesize($file);
+                            $fileSizeFormatted = $fileSize > 1024 * 1024 * 1024
+                                ? number_format($fileSize / (1024 * 1024 * 1024), 2) . ' GB'
+                                : number_format($fileSize / (1024 * 1024), 2) . ' MB';
+                            $fileDate = date('Y-m-d H:i:s', filemtime($file));
+                            $isCurrentlyRecording = ($file === $currentRecording);
+                            ?>
+                            <div class="list-group-item">
+                                <div class="d-flex align-items-center flex-wrap gap-2">
+                                    <div class="thumbnail-container">
+                                        <img src="<?php
+                                        echo $isCurrentlyRecording
+                                            ? 'assets/imgs/recording.png'
+                                            : (file_exists($thumbnailFile)
+                                                ? $thumbnailFile . '?t=' . filemtime($thumbnailFile)
+                                                : 'default-thumbnail.jpg'); ?>"
+                                             alt="<?php echo $isCurrentlyRecording ? 'Recording in Progress' : 'Thumbnail'; ?>">
                                     </div>
-                                    <div class="input-group flex-grow-1">
-                                        <span class="input-group-text">
-                                            <i class="bi bi-sticky"></i>
-                                        </span>
-                                        <input type="text" name="note" class="form-control form-control-sm w-50"
-                                               maxlength="50"
-                                               value="<?php echo htmlspecialchars(getRecordingNote($file)); ?>"
-                                               placeholder="Enter note for this recording (max 50 characters)"
-                                               oninput="updateCharacterCount(this)">
+                                    <div class="flex-grow-1">
+                                        <h5 class="mb-1">
+                                            <?php echo htmlspecialchars($fileName); ?>
+                                            <?php if ($isCurrentlyRecording): ?>
+                                                <span class="badge bg-danger">Recording in Progress</span>
+                                            <?php endif; ?>
+                                        </h5>
+                                        <p class="mb-1">Size: <?php echo $fileSizeFormatted; ?></p>
+                                        <small class="text-muted">
+                                            Recorded: <?php echo $fileDate; ?><br>
+                                            Duration: <?php echo $isCurrentlyRecording ? 'Recording...' : getVideoDuration($file); ?>
+                                            <?php
+                                            $note = getRecordingNote($file);
+                                            if (!empty($note)): ?>
+                                                <br>Note: <span class="recording-note"><?php echo htmlspecialchars($note); ?></span>
+                                            <?php endif; ?>
+                                        </small>
                                     </div>
-                                    <div class="flex-shrink-0">
-                                        <button type="submit" class="btn btn-primary btn-sm icon-btn">
-                                            <i class="bi bi-save"></i>
-                                            Save Note
-                                        </button>
-                                        <button type="button" class="btn btn-secondary btn-sm icon-btn"
-                                                onclick="toggleNoteForm('<?php echo preg_replace('/[^a-zA-Z0-9]/', '_', $fileName); ?>')">
-                                            <i class="bi bi-x-circle"></i>
-                                            Cancel
-                                        </button>
+                                    <div class="d-flex align-items-center flex-wrap gap-2 mt-2">
+                                        <!-- Only show Add/Edit Note button if not recording -->
+                                        <?php if (!$isCurrentlyRecording && isAdmin() && !$recordingActive): ?>
+                                            <button class="btn btn-info btn-sm icon-btn me-2"
+                                                    onclick="toggleNoteForm('<?php echo preg_replace('/[^a-zA-Z0-9]/', '_', $fileName); ?>')"
+                                                    type="button">
+                                                <i class="bi bi-pencil-square"></i>
+                                                <?php echo empty(getRecordingNote($file)) ? 'Add Note' : 'Edit Note'; ?>
+                                            </button>
+                                        <?php endif; ?>
+
+                                        <?php if (!$isCurrentlyRecording): ?>
+                                            <?php if (isAdmin() || (isset($settings['allow_vlc']) && $settings['allow_vlc'])): ?>
+                                                <a href="<?php echo generateVLCUrl($file); ?>"
+                                                   onclick="logVLCPlay(event, '<?php echo htmlspecialchars($fileName); ?>')"
+                                                   class="btn btn-primary btn-sm icon-btn me-2">
+                                                    <i class="bi bi-play-circle"></i>
+                                                    Play Video
+                                                </a>
+                                            <?php endif; ?>
+
+                                            <?php if (isAdmin() || (isset($settings['allow_m3u']) && $settings['allow_m3u'])): ?>
+                                                <a href="?getm3u=<?php echo urlencode($fileName); ?>"
+                                                   class="btn btn-secondary btn-sm icon-btn me-2">
+                                                    <i class="bi bi-file-earmark-play"></i>
+                                                    Download M3U
+                                                </a>
+                                            <?php endif; ?>
+
+                                            <?php if (isAdmin() || (isset($settings['allow_mp4']) && $settings['allow_mp4'])): ?>
+                                                <a href="?download=<?php echo urlencode($fileName); ?>"
+                                                   class="btn btn-success btn-sm icon-btn me-2">
+                                                    <i class="bi bi-download"></i>
+                                                    Download MP4
+                                                </a>
+                                            <?php endif; ?>
+
+                                            <?php if (isAdmin() && !$recordingActive): ?>
+                                                <button class="btn btn-danger btn-sm icon-btn me-2"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#deleteModal"
+                                                        data-file="<?php echo urlencode($file); ?>">
+                                                    <i class="bi bi-trash"></i>
+                                                    Delete
+                                                </button>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
                                     </div>
-                                </form>
+                                    <!-- Only show note form if not recording -->
+                                    <?php if (isAdmin() && !$isCurrentlyRecording && !$recordingActive): ?>
+                                        <div id="noteForm_<?php echo preg_replace('/[^a-zA-Z0-9]/', '_', $fileName); ?>"
+                                             class="mt-2 w-100 border-top pt-2" style="display: none;">
+                                            <form class="d-flex gap-2" onsubmit="handleNoteSubmit(event, this); return false;">
+                                                <input type="hidden" name="recording_file"
+                                                       value="<?php echo htmlspecialchars($file); ?>">
+                                                <div class="character-count text-muted">
+                                                    <small><span>0</span>/50</small>
+                                                </div>
+                                                <div class="input-group flex-grow-1">
+                                                    <span class="input-group-text">
+                                                        <i class="bi bi-sticky"></i>
+                                                    </span>
+                                                    <input type="text" name="note" class="form-control form-control-sm w-50"
+                                                           maxlength="50"
+                                                           value="<?php echo htmlspecialchars(getRecordingNote($file)); ?>"
+                                                           placeholder="Enter note for this recording (max 50 characters)"
+                                                           oninput="updateCharacterCount(this)">
+                                                </div>
+                                                <div class="flex-shrink-0">
+                                                    <button type="submit" class="btn btn-primary btn-sm icon-btn">
+                                                        <i class="bi bi-save"></i>
+                                                        Save Note
+                                                    </button>
+                                                    <button type="button" class="btn btn-secondary btn-sm icon-btn"
+                                                            onclick="toggleNoteForm('<?php echo preg_replace('/[^a-zA-Z0-9]/', '_', $fileName); ?>')">
+                                                        <i class="bi bi-x-circle"></i>
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
-                        <?php endif; ?>
+                        <?php endforeach; ?>
                     </div>
                 </div>
-            <?php endforeach; ?>
-        <?php else: ?>
-            <div class="list-group-item">No recordings found.</div>
-        <?php endif; ?>
-    </div>
+            </div>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <div class="list-group-item">No recordings found.</div>
+    <?php endif; ?>
 <?php endif; ?>
 
 <script>
-    // Set up SSE connection
-    let retryCount = 0;
-    const MAX_RETRIES = 3;
-    let evtSource = null;
+    function toggleNoteForm(fileId) {
+        const formId = 'noteForm_' + fileId;
+        const form = document.getElementById(formId);
+        if (form) {
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+    }
 
-    // Note submission handler
+    function updateCharacterCount(input) {
+        const charCount = input.value.length;
+        const characterCountElement = input.closest('form').querySelector('.character-count span');
+        characterCountElement.textContent = charCount;
+    }
+
     async function handleNoteSubmit(event, form) {
         event.preventDefault();
 
@@ -249,65 +298,4 @@ if (isAdmin()): ?>
             console.error('Error updating note:', error);
         }
     }
-
-    function toggleNoteForm(fileId) {
-        const formId = 'noteForm_' + fileId;
-        const form = document.getElementById(formId);
-        if (form) {
-            form.style.display = form.style.display === 'none' ? 'block' : 'none';
-        }
-    }
-
-    function updateCharacterCount(input) {
-        const charCount = input.value.length;
-        const characterCountElement = input.closest('form').querySelector('.character-count span');
-        characterCountElement.textContent = charCount;
-    }
-
-    function setupSSE() {
-        if (evtSource !== null) {
-            evtSource.close();
-        }
-
-        evtSource = new EventSource('?sse=listen');
-
-        evtSource.onopen = function () {
-            console.log('SSE connection established');
-            retryCount = 0;
-        };
-
-        evtSource.onerror = function (err) {
-            console.error('SSE connection error:', err);
-            evtSource.close();
-            evtSource = null;
-
-            if (retryCount < MAX_RETRIES) {
-                const backoffTime = Math.min(1000 * Math.pow(2, retryCount), 10000);
-                retryCount++;
-                console.log(`Attempting reconnection in ${backoffTime / 1000} seconds...`);
-                setTimeout(setupSSE, backoffTime);
-            } else {
-                console.log('Max retry attempts reached. Please refresh the page manually.');
-            }
-        };
-
-        evtSource.addEventListener('recordingChange', function (e) {
-            console.log('Recording change detected');
-            window.location.reload();
-        });
-
-        evtSource.addEventListener('heartbeat', function (e) {
-            console.log('Heartbeat received at:', new Date().toISOString());
-        });
-    }
-
-    // Initialize SSE when page loads
-    document.addEventListener('DOMContentLoaded', setupSSE);
-
-    // Clean up when page is unloaded
-    window.addEventListener('beforeunload', function () {
-        if (evtSource) {
-            evtSource.close();
-        }
-    });
 </script>

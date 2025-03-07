@@ -751,7 +751,7 @@
 
                 // Start auto-refresh
                 refreshCurrentLog();
-                logRefreshInterval = setInterval(refreshCurrentLog, 30000); // Refresh every 30 seconds
+                logRefreshInterval = setInterval(refreshCurrentLog, 60000); // Refresh every 60 seconds
             });
 
             // Clear auto-refresh when modal is hidden

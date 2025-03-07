@@ -18,6 +18,11 @@
         <script src="assets/js/stream_monitor.js"></script>
     <?php endif; ?>
 
+    <?php if (isAuthenticated()): ?>
+        <!-- Recordings list update script -->
+        <script src="assets/js/recordings_update.js"></script>
+    <?php endif; ?>
+
     <?php if (isAuthenticated() && isset($settings['vlc_webpage_url']) && !empty($settings['vlc_webpage_url'])): ?>
         <script>
             // Make VLC webpage URL available to JavaScript
