@@ -100,6 +100,7 @@ try {
         'server_url' => rtrim($_POST['server_url'], '/'),
         'live_stream_url' => $_POST['live_stream_url'],
         'srt_url' => $_POST['srt_url'],
+        'stream_check_interval' => max(1, min(60, (int)$_POST['stream_check_interval'])),
         'show_recordings' => $_POST['show_recordings'],
         'show_livestream' => $_POST['show_livestream'],
         'allow_vlc' => $_POST['allow_vlc'],

@@ -8,6 +8,7 @@ class SettingsManager
         'server_url' => 'http://yourdomain.com',
         'live_stream_url' => 'vlc://yourdomain.com',
         'srt_url' => '',
+        'stream_check_interval' => 5,
         'show_recordings' => true,
         'show_livestream' => true,
         'allow_vlc' => true,
@@ -193,6 +194,21 @@ function renderSettingsModal($settings)
                                                required>
                                     </div>
                                     <small class="text-muted">Example: srt://yourdomain.com:port if needed</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="stream_check_interval" class="form-label">Recording URL Check Interval
+                                        (minutes)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="bi bi-clock-history"></i>
+                                        </span>
+                                        <input type="number" class="form-control" id="stream_check_interval"
+                                               name="stream_check_interval"
+                                               value="<?php echo htmlspecialchars($settings['stream_check_interval'] ?? '5'); ?>"
+                                               min="1" max="60" required>
+                                    </div>
+                                    <small class="text-muted">How frequently the system should check if the Recording
+                                        URL is accessible (1-60 minutes)</small>
                                 </div>
                                 <div class="mb-3">
                                     <label for="vlc_webpage_url" class="form-label">VLC Webpage URL</label>
@@ -531,36 +547,44 @@ function renderSettingsModal($settings)
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <h5><i class="bi bi-apple me-2"></i>Mac VLC Handler</h5>
-                                                <a href="vlc_handlers/mac_vlc_handler.zip" class="btn btn-outline-primary icon-btn mb-3">
+                                                <a href="vlc_handlers/mac_vlc_handler.zip"
+                                                   class="btn btn-outline-primary icon-btn mb-3">
                                                     <i class="bi bi-cloud-download me-2"></i>
                                                     Download Mac VLC Handler
                                                 </a>
                                                 <p class="text-muted">
-                                                    This VLC handler enables seamless integration with the BLIVE RePlay system on macOS.
-                                                    After downloading, unzip the file and run <b>./build.sh --install</b> from a terminal.
+                                                    This VLC handler enables seamless integration with the BLIVE RePlay
+                                                    system on macOS.
+                                                    After downloading, unzip the file and run <b>./build.sh
+                                                        --install</b> from a terminal.
                                                     If it doesn't work, try running chmod +x build.sh first.
                                                 </p>
                                                 <ul class="small text-muted">
                                                     <li>Compatible with macOS 10.14+ (Mojave and later)</li>
                                                     <li>Requires VLC media player 3.0 or newer</li>
-                                                    <li>Supports live stream and one-click playback from BLIVE RePlay</li>
+                                                    <li>Supports live stream and one-click playback from BLIVE RePlay
+                                                    </li>
                                                 </ul>
                                             </div>
                                             <div class="col-md-6">
                                                 <h5><i class="bi bi-windows me-2"></i>Windows VLC Handler</h5>
-                                                <a href="vlc_handlers/windows_vlc_handler.zip" class="btn btn-outline-primary icon-btn mb-3">
+                                                <a href="vlc_handlers/windows_vlc_handler.zip"
+                                                   class="btn btn-outline-primary icon-btn mb-3">
                                                     <i class="bi bi-cloud-download me-2"></i>
                                                     Download Windows VLC Handler
                                                 </a>
                                                 <p class="text-muted">
-                                                    This VLC handler enables seamless integration with the BLIVE RePlay system on Windows.
-                                                    Download and unzip the file within the <b>C:\Program Files\VideoLAN\VLC\ folder.
-                                                    Run the install.bat file.</b>
+                                                    This VLC handler enables seamless integration with the BLIVE RePlay
+                                                    system on Windows.
+                                                    Download and unzip the file within the <b>C:\Program
+                                                        Files\VideoLAN\VLC\ folder.
+                                                        Run the install.bat file.</b>
                                                 </p>
                                                 <ul class="small text-muted">
                                                     <li>Compatible with Windows 10 and 11</li>
                                                     <li>Requires VLC media player 3.0 or newer</li>
-                                                    <li>Supports live stream and one-click playback from BLIVE RePlay</li>
+                                                    <li>Supports live stream and one-click playback from BLIVE RePlay
+                                                    </li>
                                                 </ul>
                                             </div>
                                         </div>
@@ -577,15 +601,20 @@ function renderSettingsModal($settings)
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <h5><i class="bi bi-apple me-2"></i>Mac Auto-Close Handler</h5>
-                                                <a href="vlc_handlers/mac_close_chrome_vlc.zip" class="btn btn-outline-primary icon-btn mb-3">
+                                                <a href="vlc_handlers/mac_close_chrome_vlc.zip"
+                                                   class="btn btn-outline-primary icon-btn mb-3">
                                                     <i class="bi bi-cloud-download me-2"></i>
                                                     Download Mac Auto-Close Handler
                                                 </a>
                                                 <p class="text-muted">
-                                                    This handler automatically closes Chrome and VLC and is intended to be scheduled
-                                                    to run at night or the in the morning to close the two apps if left open.
-                                                    After downloading, unzip the file and and copy to your Applications folder.
-                                                    To schedule an app to run via the Mac Calendar (iCal), follow these steps:
+                                                    This handler automatically closes Chrome and VLC and is intended to
+                                                    be scheduled
+                                                    to run at night or the in the morning to close the two apps if left
+                                                    open.
+                                                    After downloading, unzip the file and and copy to your Applications
+                                                    folder.
+                                                    To schedule an app to run via the Mac Calendar (iCal), follow these
+                                                    steps:
                                                     <br>
                                                     1. Open Calendar app<br>
                                                     2. Select or create the existing event<br>
@@ -604,15 +633,20 @@ function renderSettingsModal($settings)
                                             </div>
                                             <div class="col-md-6">
                                                 <h5><i class="bi bi-windows me-2"></i>Windows Auto-Close Handler</h5>
-                                                <a href="vlc_handlers/windows_close_chrome_vlc.zip" class="btn btn-outline-primary icon-btn mb-3">
+                                                <a href="vlc_handlers/windows_close_chrome_vlc.zip"
+                                                   class="btn btn-outline-primary icon-btn mb-3">
                                                     <i class="bi bi-cloud-download me-2"></i>
                                                     Download Windows Auto-Close Handler
                                                 </a>
                                                 <p class="text-muted">
-                                                    This handler automatically closes Chrome and VLC and is intended to be scheduled
-                                                    to run at night or the in the morning to close the two apps if left open. Create a Scripts folder on your C:\ drive.
-                                                    After downloading, unzip the file and place the files in your Scripts folder.
-                                                    <br>You may double-click on the CreateTask.ps1 file to create the needed scheduled task in task scheduler.
+                                                    This handler automatically closes Chrome and VLC and is intended to
+                                                    be scheduled
+                                                    to run at night or the in the morning to close the two apps if left
+                                                    open. Create a Scripts folder on your C:\ drive.
+                                                    After downloading, unzip the file and place the files in your
+                                                    Scripts folder.
+                                                    <br>You may double-click on the CreateTask.ps1 file to create the
+                                                    needed scheduled task in task scheduler.
                                                     <br>By default, the task will run every night at 1:00 AM.
                                                 </p>
                                                 <ul class="small text-muted">
@@ -815,6 +849,7 @@ function handleSettingsUpdate($settingsManager)
             'server_url' => rtrim($_POST['server_url'], '/'),
             'live_stream_url' => $_POST['live_stream_url'],
             'srt_url' => $_POST['srt_url'],
+            'stream_check_interval' => max(1, min(60, (int)($_POST['stream_check_interval'] ?? 5))),
             'show_recordings' => isset($_POST['show_recordings']),
             'show_livestream' => isset($_POST['show_livestream']),
             'allow_vlc' => isset($_POST['allow_vlc']),
