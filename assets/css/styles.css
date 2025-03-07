@@ -1,3 +1,15 @@
+/*
+ * BLIVE RePlay - Comprehensive Stylesheet
+ * Last Updated: March 2025
+ * Provides styling for responsive design across devices
+ */
+
+/* Reset and Base Styles */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Logo Styles */
 .replay-logo {
     width: 300px;
     height: auto;
@@ -5,6 +17,7 @@
     margin: 0;
 }
 
+/* Recording Status Styles */
 .recording-status {
     padding: 10px;
     margin: 10px 0;
@@ -15,7 +28,6 @@
 .recording-active {
     background-color: #ffdede;
     color: #dc3545;
-    /*animation: pulse 2s infinite;*/
 }
 
 .recording-inactive {
@@ -28,27 +40,25 @@
     margin-top: 5px;
 }
 
-.role-change-form {
-    margin: 0;
-    padding: 0;
-}
-
-.role-change-form select {
-    min-width: 100px;
-}
-
+/* Animations */
 @keyframes pulse {
-    0% {
-        opacity: 1;
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
     }
-    50% {
-        opacity: 0.7;
-    }
-    100% {
+    to {
         opacity: 1;
+        transform: translateY(0);
     }
 }
 
+/* Thumbnail Styles */
 .thumbnail-container {
     width: 230px;
     height: 130px;
@@ -62,7 +72,17 @@
     object-fit: cover;
 }
 
-/* Landing page styles */
+/* Form Styles */
+.role-change-form {
+    margin: 0;
+    padding: 0;
+}
+
+.role-change-form select {
+    min-width: 100px;
+}
+
+/* Landing Page Styles */
 .landing-container {
     min-height: 80vh;
     display: flex;
@@ -97,17 +117,19 @@
 
 .landing-option a {
     color: rgb(62, 169, 222);
+    text-decoration: none;
 }
 
 .landing-option a:hover {
     color: rgb(42, 149, 202);
-    text-decoration: none;
 }
 
+/* Custom Button Styles */
 .btn.custom-btn {
     background-color: rgb(62, 169, 222);
     border-color: rgb(62, 169, 222);
     color: white;
+    transition: all 0.2s ease;
 }
 
 .btn.custom-btn:hover {
@@ -116,6 +138,7 @@
     color: white;
 }
 
+/* User Cards */
 .user-cards .card {
     border: 1px solid rgba(0, 0, 0, .125);
     transition: box-shadow 0.3s ease;
@@ -129,7 +152,101 @@
     min-width: 120px;
 }
 
+/* Icon Button Styles */
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 50px;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-sm.icon-btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.icon-btn i {
+    font-size: 1rem;
+}
+
+.btn-sm.icon-btn i {
+    font-size: 0.875rem;
+}
+
+/* Input Group Styles */
+.input-group-text {
+    background-color: #f8f9fa;
+    border-right: none;
+}
+
+.input-group-text i {
+    font-size: 1.1rem;
+    color: #6c757d;
+}
+
+.btn-sm.input-group-text i {
+    font-size: 0.875rem;
+}
+
+.input-group .form-control {
+    border-left: none;
+}
+
+.input-group .form-control:focus {
+    border-left: none;
+    box-shadow: none;
+}
+
+.input-group:focus-within .input-group-text {
+    border-color: #86b7fe;
+}
+
+/* Alert Styles */
+.alert i {
+    font-size: 1.2rem;
+}
+
+/* Form Check Label Icons */
+.form-check-label i {
+    color: #6c757d;
+}
+
+/* Button Group Styles */
+.btn-group .icon-btn {
+    justify-content: center;
+    min-width: 140px;
+}
+
+/* Login Form Specific Styles */
+.login-form {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* Modal Specific Styles */
+.modal-title i {
+    font-size: 1.1rem;
+}
+
+.modal.fade .modal-dialog {
+    transform: none !important;
+}
+
+.modal-content {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+/* Responsive Styles - Mobile Adjustments */
 @media (max-width: 768px) {
+    /* Global Mobile Margin Override */
+    .ms-2, .ms-md-2 {
+        margin-left: 0 !important;
+    }
+
+    /* Responsive Layout Adjustments */
     .list-group-item {
         padding: 15px 10px;
     }
@@ -171,7 +288,7 @@
         margin-top: 15px;
     }
 
-    /* Landing page responsive styles */
+    /* Landing Page Mobile Styles */
     .landing-options {
         flex-direction: column;
         gap: 1rem;
@@ -182,9 +299,7 @@
         height: 150px;
     }
 
-}
-
-@media (max-width: 768px) {
+    /* Modal Mobile Styles */
     .modal-dialog {
         margin: 0.5rem;
         max-width: calc(100% - 1rem);
@@ -204,252 +319,14 @@
     .form-control {
         font-size: 16px; /* Prevents iOS zoom on input focus */
     }
-}
 
-/* Ensure modal content doesn't shift when keyboard appears on mobile */
-.modal.fade .modal-dialog {
-    transform: none !important;
-}
-
-.modal-content {
-    border-radius: 0.5rem;
-    overflow: hidden;
-}
-
-/* Regular modal styles */
-#activityLogModal .ffmpeg-log-pre {
-    height: calc(100vh - 400px);
-    overflow-y: auto;
-    white-space: pre-wrap;
-    font-size: 0.875rem;
-}
-
-/* Print styles */
-@media print {
-    body * {
-        visibility: hidden;
-    }
-
-    .modal-backdrop {
-        display: none !important;
-    }
-
-    #activityLogModal {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        margin: 0 !important;
-        padding: 20px !important;
-        height: auto !important;
-        overflow: visible !important;
-    }
-
-    #activityLogModal .modal-dialog {
-        transform: none !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100% !important;
-        max-width: none !important;
-    }
-
-    #activityLogModal .modal-content {
-        border: none !important;
-        box-shadow: none !important;
-        height: auto !important;
-        overflow: visible !important;
-    }
-
-    #activityLogModal .modal-body {
-        height: auto !important;
-        overflow: visible !important;
-        padding: 0 !important;
-    }
-
-    #activityLogModal .modal-body,
-    #activityLogModal .modal-body * {
-        visibility: visible;
-        overflow: visible !important;
-    }
-
-    /* Keep the current display state of log content during printing */
-    #activityLogModal .log-content {
-        page-break-inside: auto !important;
-    }
-
-    /* Only make the currently visible log content appear in print */
-    #activityLogModal .log-content[style*="display: none"] {
-        display: none !important;
-    }
-
-    #activityLogModal .table-responsive {
-        overflow: visible !important;
-    }
-
-    #activityLogModal .table {
-        width: 100% !important;
-        margin-bottom: 20px !important;
-        page-break-inside: auto !important;
-    }
-
-    #activityLogModal .table tr {
-        page-break-inside: avoid !important;
-    }
-
-    #activityLogModal .ffmpeg-log-pre {
-        height: auto !important;
-        overflow: visible !important;
-        white-space: pre-wrap !important;
-        font-size: 12pt !important;
-        page-break-inside: auto !important;
-    }
-
-    #activityLogModal h5.modal-title {
-        font-size: 18pt !important;
-        margin-bottom: 20px !important;
-        visibility: visible !important;
-    }
-}
-
-.password-change-container form {
-    animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-/* Icon Button Styles */
-.icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.375rem 0.75rem;
-    border-radius:50px;
-    transition: all 0.2s ease-in-out;
-}
-
-.btn-sm.icon-btn {
-    padding: 0.25rem 0.5rem;
-}
-
-.icon-btn i {
-    font-size: 1rem;
-}
-
-.btn-sm.icon-btn i {
-    font-size: 0.875rem;
-}
-
-.icon-btn:hover {
-    
-}
-
-/* Input Group Styles */
-.input-group-text {
-    background-color: #f8f9fa;
-    border-right: none;
-}
-
-.input-group-text i {
-    font-size: 1.1rem;
-    color: #6c757d;
-}
-
-.btn-sm.input-group-text i {
-    font-size: 0.875rem;
-}
-
-.input-group .form-control {
-    border-left: none;
-}
-
-.input-group .form-control:focus {
-    border-left: none;
-    box-shadow: none;
-}
-
-.input-group:focus-within .input-group-text {
-    border-color: #86b7fe;
-}
-
-/* Alert Styles */
-.alert i {
-    font-size: 1.2rem;
-}
-
-/* Button Group Styles */
-.btn-group .icon-btn {
-    justify-content: center;
-    min-width: 140px;
-}
-
-/* Form Check Label Icons */
-.form-check-label i {
-    color: #6c757d;
-}
-
-/* Password Change Container Animation */
-.password-change-container form {
-    animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Login Form Specific Styles */
-.login-form {
-    max-width: 400px;
-    margin: 0 auto;
-}
-
-/* Modal Specific Styles */
-.modal-title i {
-    font-size: 1.1rem;
-}
-.role-change-form .input-group {
-    min-width: 160px;
-    width: auto;
-}
-
-.role-change-form .form-select {
-    width: auto;
-    min-width: 120px;
-}
-
-@media (max-width: 768px) {
-    .role-change-form .input-group {
-        width: 100%;
-    }
-
+    /* Form Responsive Adjustments */
+    .role-change-form .input-group,
     .role-change-form .form-select {
         width: 100%;
     }
-}
 
-/* Print Specific Styles */
-@media print {
-    .icon-btn i {
-        display: none;
-    }
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
+    /* Additional Mobile Responsive Tweaks */
     .w-md-auto {
         width: 100% !important;
     }
@@ -461,4 +338,26 @@
     .btn-group .icon-btn {
         min-width: auto;
     }
+}
+
+/* Print Styles */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    .modal-backdrop {
+        display: none !important;
+    }
+
+    .icon-btn i {
+        display: none;
+    }
+
+    /* Additional print-specific styles would go here */
+}
+
+/* Password Change Container Animation */
+.password-change-container form {
+    animation: fadeIn 0.3s ease-in-out;
 }
