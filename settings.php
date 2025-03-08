@@ -366,20 +366,20 @@ function renderSettingsModal($settings)
                                              style="display: <?php echo isset($settings['email_notifications_enabled']) && $settings['email_notifications_enabled'] ? 'block' : 'none'; ?>;">
                                             <div class="mb-3">
                                                 <label for="scheduler_notification_email" class="form-label">Notification
-                                                    Email</label>
+                                                    Email(s)</label>
                                                 <div class="input-group">
-                                                <span class="input-group-text">
-                                                    <i class="bi bi-envelope-at"></i>
-                                                </span>
-                                                    <input type="email" class="form-control"
+                                                    <span class="input-group-text">
+                                                        <i class="bi bi-envelope-at"></i>
+                                                    </span>
+                                                    <input type="text" class="form-control"
                                                            id="scheduler_notification_email"
                                                            name="scheduler_notification_email"
                                                            value="<?php echo htmlspecialchars($settings['scheduler_notification_email'] ?? ''); ?>"
-                                                           placeholder="notifications@example.com">
+                                                           placeholder="notifications@example.com, secondary@example.com">
                                                 </div>
-                                                <small class="text-muted">Email address to receive notifications about
-                                                    scheduled
-                                                    recordings</small>
+                                                <small class="text-muted">Email address(es) to receive notifications
+                                                    about scheduled recordings. Separate multiple addresses with
+                                                    commas.</small>
                                             </div>
                                             <div class="row mb-3">
                                                 <div class="col-md-6">

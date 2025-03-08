@@ -9,9 +9,9 @@
 // Include PHPMailer classes - make sure these are installed via Composer
 // If not installed, you can download them from https://github.com/PHPMailer/PHPMailer
 // and place them in a 'vendor/phpmailer' directory
+use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
 
 class EmailService
 {
@@ -205,25 +205,56 @@ class EmailService
     /**
      * Send an email
      *
-     * @param string $to Recipient email address
+     * @param string|array $to Recipient email address(es) - can be a string with comma-separated emails or an array
      * @param string $subject Email subject
      * @param string $message Email body (HTML)
      * @param string $plainText Plain text alternative
      * @param array $attachments Array of attachment file paths
      * @return array Result with success status and message
      */
-    public function sendEmail(string $to, string $subject, string $message,
+    public function sendEmail($to, string $subject, string $message,
                               string $plainText = '', array $attachments = []): array
     {
-        $this->log("Preparing to send email to: $to");
+        // Convert string email addresses to array
+        if (is_string($to)) {
+            $to = array_map('trim', explode(',', $to));
+        }
 
-        // Validate recipient
-        if (empty($to) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
-            $this->log("Invalid recipient email address: $to", 'error');
+        // Filter out any empty values
+        $to = array_filter($to);
+
+        if (empty($to)) {
+            $this->log("No valid recipient email addresses provided", 'error');
             return [
                 'success' => false,
-                'message' => 'Invalid recipient email address'
+                'message' => 'No valid recipient email addresses provided'
             ];
+        }
+
+        $this->log("Preparing to send email to: " . implode(', ', $to));
+
+        // Validate recipients
+        $validRecipients = [];
+        $invalidRecipients = [];
+
+        foreach ($to as $email) {
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $validRecipients[] = $email;
+            } else {
+                $invalidRecipients[] = $email;
+            }
+        }
+
+        if (empty($validRecipients)) {
+            $this->log("No valid email addresses found: " . implode(', ', $invalidRecipients), 'error');
+            return [
+                'success' => false,
+                'message' => 'No valid recipient email addresses'
+            ];
+        }
+
+        if (!empty($invalidRecipients)) {
+            $this->log("Some invalid email addresses were skipped: " . implode(', ', $invalidRecipients), 'warning');
         }
 
         // Get PHPMailer instance
@@ -236,8 +267,10 @@ class EmailService
         }
 
         try {
-            // Recipients
-            $mail->addAddress($to);
+            // Add all valid recipients
+            foreach ($validRecipients as $email) {
+                $mail->addAddress($email);
+            }
 
             // Content
             $mail->isHTML(true);
@@ -264,10 +297,12 @@ class EmailService
             // Send the email
             $mail->send();
 
-            $this->log("Email sent successfully to: $to");
+            $recipientList = implode(', ', $validRecipients);
+            $this->log("Email sent successfully to: $recipientList");
             return [
                 'success' => true,
-                'message' => 'Email sent successfully'
+                'message' => 'Email sent successfully',
+                'recipients' => $validRecipients
             ];
 
         } catch (Exception $e) {
@@ -353,7 +388,7 @@ HTML;
     {
         $this->log("Preparing recording start notification");
 
-        // Get notification recipient
+        // Get notification recipient(s)
         $to = $this->settings['scheduler_notification_email'] ?? '';
         if (empty($to)) {
             $this->log("No notification email configured, skipping notification", 'warning');
@@ -428,7 +463,7 @@ HTML;
     {
         $this->log("Preparing recording complete notification");
 
-        // Get notification recipient
+        // Get notification recipient(s)
         $to = $this->settings['scheduler_notification_email'] ?? '';
         if (empty($to)) {
             $this->log("No notification email configured, skipping notification", 'warning');

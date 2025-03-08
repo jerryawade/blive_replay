@@ -21,7 +21,8 @@ require_once 'settings.php';
 require_once 'EmailService.php';
 
 // Download PHPMailer if it doesn't exist
-function downloadPHPMailer() {
+function downloadPHPMailer()
+{
     // Create directories if they don't exist
     if (!is_dir('phpmailer')) {
         mkdir('phpmailer', 0755);
@@ -75,11 +76,42 @@ try {
         exit;
     }
 
-    // Validate email address
-    if (!filter_var($_POST['scheduler_notification_email'], FILTER_VALIDATE_EMAIL)) {
+    // Extract and validate email addresses
+    $emails = array_map('trim', explode(',', $_POST['scheduler_notification_email']));
+    $emails = array_filter($emails); // Remove empty entries
+
+    if (empty($emails)) {
         echo json_encode([
             'success' => false,
-            'message' => 'Invalid email address format'
+            'message' => 'At least one valid email address is required'
+        ]);
+        exit;
+    }
+
+    // Validate all email addresses
+    $validEmails = [];
+    $invalidEmails = [];
+
+    foreach ($emails as $email) {
+        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $validEmails[] = $email;
+        } else {
+            $invalidEmails[] = $email;
+        }
+    }
+
+    if (empty($validEmails)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'No valid email addresses found'
+        ]);
+        exit;
+    }
+
+    if (!empty($invalidEmails)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid email format: ' . implode(', ', $invalidEmails)
         ]);
         exit;
     }
