@@ -2,6 +2,8 @@
 /**
  * Direct Stream Status API
  * Provides immediate status information with no caching
+ * 
+ * Enhanced version with improved reliability
  */
 
 require_once 'settings.php';
@@ -187,6 +189,12 @@ try {
                 // Return status with checking flag
                 $status['checking'] = true;
                 $status['message'] = 'Status is outdated, refreshing...';
+                
+                // Important: If we previously had a success, maintain the active status during the check
+                if (isset($status['last_success']) && $status['last_success']) {
+                    $status['active'] = true;
+                }
+                
                 echo json_encode($status);
                 exit;
             }
