@@ -1,6 +1,8 @@
 /**
  * Enhanced Stream Monitor
  * Updates indicator color and status text without refreshing the page
+ * 
+ * Improved stability for handling connection fluctuations
  */
 class StreamMonitor {
     constructor() {
@@ -14,6 +16,10 @@ class StreamMonitor {
         this.lastCheckTime = 0;
         this.pollInterval = null;
         this.updatesPending = false;
+        this.failureCount = 0;          // Track consecutive failures
+        this.maxFailureCount = 3;       // Number of consecutive failures before showing red
+        this.stableSuccessState = null; // Track last stable state
+        this.stabilityTimeout = null;   // Timer for stabilizing state
 
         // Debugging flag
         this.debugMode = true;
@@ -53,6 +59,9 @@ class StreamMonitor {
             }
             if (this.pollInterval) {
                 clearInterval(this.pollInterval);
+            }
+            if (this.stabilityTimeout) {
+                clearTimeout(this.stabilityTimeout);
             }
         });
     }
@@ -141,6 +150,22 @@ class StreamMonitor {
             if (this.lastStatus.last_check) {
                 const lastCheckTime = new Date(this.lastStatus.last_check * 1000).toLocaleTimeString();
                 tooltipContent += `<br>Last checked: ${lastCheckTime}`;
+                
+                // Add last success info if available
+                if (this.lastStatus.last_success) {
+                    const lastSuccessTime = new Date(this.lastStatus.last_success * 1000).toLocaleTimeString();
+                    tooltipContent += `<br>Last confirmed working: ${lastSuccessTime}`;
+                }
+                
+                // Add retry info if available
+                if (this.lastStatus.retries) {
+                    tooltipContent += `<br>Retries: ${this.lastStatus.retries}`;
+                }
+                
+                // Add stability info if we're in a stabilized state
+                if (this.failureCount > 0 && this.lastStatus.active) {
+                    tooltipContent += `<br><small>(Status stabilized after temporary issue)</small>`;
+                }
             }
         } else {
             tooltipContent = 'Stream status unknown<br>Click to check now';
@@ -184,9 +209,14 @@ class StreamMonitor {
         } else {
             // When not recording, show stream status
             if (status) {
-                this.statusTextElement.textContent = status.active === true
-                    ? 'Recording Stopped'
-                    : 'Recording URL Not Accessible';
+                // Use the stable success state if we're actively stabilizing after failure
+                if (this.stabilityTimeout && this.stableSuccessState === true) {
+                    this.statusTextElement.textContent = 'Recording Stopped';
+                } else {
+                    this.statusTextElement.textContent = status.active === true
+                        ? 'Recording Stopped'
+                        : 'Recording URL Not Accessible';
+                }
             } else {
                 // Fallback to generic message if no status
                 this.statusTextElement.textContent = 'Stream Status Unknown';
@@ -223,15 +253,79 @@ class StreamMonitor {
 
         // Explicit handling of status
         if (status) {
-            // Increased strictness for accessibility
+            // Enhanced stability handling for indicator color
             if (status.active === true) {
+                // Reset failure count on success
+                this.failureCount = 0;
+                this.stableSuccessState = true;
+                
+                // Clear any pending stability timeout
+                if (this.stabilityTimeout) {
+                    clearTimeout(this.stabilityTimeout);
+                    this.stabilityTimeout = null;
+                }
+                
                 newColor = '#28a745'; // Green
                 className = 'status-active';
                 title = 'Recording URL is accessible';
             } else {
-                newColor = '#dc3545'; // Red
-                className = 'status-inactive';
-                title = 'Recording URL is not accessible';
+                // Status is false - handle consecutive failures
+                this.failureCount++;
+                this.debug(`Failure count incremented to ${this.failureCount}`);
+                
+                // If we're in stability period, maintain green
+                if (this.stableSuccessState === true) {
+                    // If we have a recent success and this is the first failure, start stability timer
+                    if (this.failureCount === 1 && status.last_success) {
+                        const timeSinceLastSuccess = (Date.now() / 1000) - status.last_success;
+                        
+                        // If the last success was within the last 10 minutes, maintain green
+                        if (timeSinceLastSuccess < 600) { // 10 minutes in seconds
+                            this.debug("Recent success detected, stabilizing state as green");
+                            newColor = '#28a745'; // Green
+                            className = 'status-active';
+                            title = 'Recording URL is likely accessible (recent success)';
+                            
+                            // Set up stability timeout to reset after some time if failures continue
+                            if (this.stabilityTimeout) {
+                                clearTimeout(this.stabilityTimeout);
+                            }
+                            
+                            this.stabilityTimeout = setTimeout(() => {
+                                this.debug("Stability timeout expired, resetting state");
+                                this.stableSuccessState = null;
+                                this.stabilityTimeout = null;
+                                
+                                // Only update UI if failures have continued
+                                if (this.failureCount >= this.maxFailureCount) {
+                                    this.updateStatusIndicator(this.lastStatus);
+                                    this.updateStatusText(this.lastStatus);
+                                }
+                            }, 60000); // 1 minute stability period
+                            
+                            // Early return to maintain green state
+                            this.debug(`Setting stabilized indicator: Color=${newColor}, Class=${className}, Title=${title}`);
+                            this.statusIndicator.style.backgroundColor = newColor;
+                            this.statusIndicator.title = title;
+                            this.statusIndicator.classList.add(className);
+                            this.forceRedraw(this.statusIndicator);
+                            return;
+                        }
+                    }
+                }
+                
+                // If we've reached the failure threshold, show red
+                if (this.failureCount >= this.maxFailureCount) {
+                    this.stableSuccessState = false;
+                    newColor = '#dc3545'; // Red
+                    className = 'status-inactive';
+                    title = 'Recording URL is not accessible';
+                } else {
+                    // For early failures, show orange as a warning
+                    newColor = '#fd7e14'; // Orange
+                    className = 'status-warning';
+                    title = 'Recording URL may be temporarily unavailable';
+                }
             }
         }
 
@@ -392,8 +486,21 @@ class StreamMonitor {
         } catch (error) {
             this.debug(`Error checking stream status: ${error.message}`);
 
-            // Reset to a default "not accessible" state on error
-            const errorStatus = { active: false, message: 'Error checking recording URL' };
+            // For connection errors to the status endpoint, don't count as a stream error
+            // Instead maintain the previous status
+            if (this.lastStatus) {
+                this.debug('Maintaining previous status due to fetch error');
+                this.checkInProgress = false;
+                this.updatesPending = false;
+                return this.lastStatus;
+            }
+
+            // Only set to "not accessible" if this is the first check ever
+            const errorStatus = { 
+                active: false, 
+                message: 'Error checking recording URL',
+                error: true
+            };
             this.lastStatus = errorStatus;
             this.checkInProgress = false;
             this.updatesPending = false;
@@ -444,6 +551,10 @@ document.addEventListener('DOMContentLoaded', function() {
             #stream-status-indicator.status-inactive {
                 background-color: #dc3545 !important;
             }
+            
+            #stream-status-indicator.status-warning {
+                background-color: #fd7e14 !important;
+            }
         `;
         document.head.appendChild(style);
 
@@ -456,6 +567,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 if (window.streamMonitor.pollInterval) {
                     clearInterval(window.streamMonitor.pollInterval);
+                }
+                if (window.streamMonitor.stabilityTimeout) {
+                    clearTimeout(window.streamMonitor.stabilityTimeout);
                 }
             }
 
