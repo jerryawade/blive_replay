@@ -195,6 +195,10 @@
                 </div>
             </div>
             <div class="modal-footer d-print-none">
+                <button type="button" class="btn btn-danger icon-btn" id="clearCurrentLogBtn" style="display: none;">
+                    <i class="bi bi-trash"></i>
+                    Clear Log
+                </button>
                 <button type="button" class="btn btn-secondary icon-btn" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg"></i>
                     Close
@@ -766,3 +770,4 @@
         }
     });
 </script>
+<script src="./assets/js/clear_logs.js"></script>
