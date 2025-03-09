@@ -604,30 +604,40 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
     </div>
 
     <!-- Delete User Confirmation Modal - Secondary modal for confirming user deletion -->
-    <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel"
-         aria-hidden="true">
-        <div class="modal-dialog">
+    <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title" id="deleteUserModalLabel">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
                         Confirm User Deletion
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <i class="bi bi-question-circle me-2"></i>
-                    Are you sure you want to delete user "<span id="deleteUserName"></span>"?
+                <div class="modal-body py-4">
+                    <div class="d-flex align-items-center">
+                        <div class="text-danger fs-3 me-3" aria-hidden="true">
+                            <i class="bi bi-question-circle-fill"></i>
+                        </div>
+                        <div>
+                            <p class="mb-0 fs-5">
+                                Are you sure you want to delete user "<span id="deleteUserName"></span>"?
+                            </p>
+                            <p class="text-muted small mb-0 mt-2">
+                                This action cannot be undone.
+                            </p>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary icon-btn" data-bs-dismiss="modal">
-                        <i class="bi bi-x-lg"></i>
+                    <button type="button" class="btn btn-outline-secondary icon-btn" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
                         Cancel
                     </button>
-                    <button type="button" class="btn btn-danger icon-btn"
+                    <button type="button" class="btn btn-danger icon-btn" id="confirmDeleteScheduleBtn"
                             onclick="handleDeleteUser(document.getElementById('deleteUserName').textContent)">
-                        <i class="bi bi-trash"></i>
-                        Delete User
+                        <i class="bi bi-trash" aria-hidden="true"></i>
+                        Delete
                     </button>
                 </div>
             </div>
@@ -804,7 +814,7 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                                                 <i class="bi bi-shield"></i>
                                             </span>
                                             <select class="form-select form-select-sm" name="new_role" onchange="handleRoleChange(this.form)">
-<option value="viewer" ${role === 'viewer' ? 'selected' : ''}>
+                                                <option value="viewer" ${role === 'viewer' ? 'selected' : ''}>
                                                     Viewer
                                                 </option>
                                                 <option value="admin" ${role === 'admin' ? 'selected' : ''}>
@@ -957,6 +967,13 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
         // Function to handle user deletion
         async function handleDeleteUser(username) {
             try {
+                // First, update the button to show a loading state
+                const deleteButton = document.querySelector('#deleteUserModal #confirmDeleteScheduleBtn');
+                if (deleteButton) {
+                    deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Deleting...';
+                    deleteButton.classList.add('disabled');
+                }
+
                 const formData = new FormData();
                 formData.append('username', username);
 
@@ -992,6 +1009,13 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
             } catch (error) {
                 console.error('Error:', error);
                 showAlert('Error deleting user', 'danger');
+            } finally {
+                // Reset the button state if needed
+                const deleteButton = document.querySelector('#deleteUserModal #confirmDeleteScheduleBtn');
+                if (deleteButton) {
+                    deleteButton.innerHTML = '<i class="bi bi-trash"></i> Delete';
+                    deleteButton.classList.remove('disabled');
+                }
             }
         }
 
