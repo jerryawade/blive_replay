@@ -512,7 +512,8 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                                         <?php echo htmlspecialchars($username); ?>
                                         <?php if (isset($userData['last_login'])): ?>
                                             <small class="text-muted d-block">
-                                                Last login: <?php echo htmlspecialchars($userData['last_login'] ?? 'Never'); ?>
+                                                Last
+                                                login: <?php echo htmlspecialchars($userData['last_login'] ?? 'Never'); ?>
                                             </small>
                                         <?php endif; ?>
                                     </td>
@@ -546,40 +547,11 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                                                 Delete
                                             </button>
                                             <button type="button"
-                                                    class="btn btn-secondary btn-sm icon-btn w-100 w-md-auto change-password-btn"
-                                                    onclick="showInlinePasswordForm('<?php echo htmlspecialchars($username); ?>')">
+                                                    class="btn btn-primary btn-sm icon-btn w-100 w-md-auto"
+                                                    onclick="showChangePasswordModal('<?php echo htmlspecialchars($username); ?>')">
                                                 <i class="bi bi-key"></i>
                                                 Password
                                             </button>
-                                        </div>
-                                        <div class="password-change-container mt-2" style="display: none;">
-                                            <form class="d-flex gap-2 align-items-start password-change-form">
-                                                <input type="hidden" name="change_password_username"
-                                                       value="<?php echo htmlspecialchars($username); ?>">
-                                                <div class="flex-grow-1">
-                                                    <div class="input-group input-group-sm">
-                                                        <span class="input-group-text">
-                                                            <i class="bi bi-key"></i>
-                                                        </span>
-                                                        <input type="password" class="form-control form-control-sm"
-                                                               name="new_password" placeholder="New Password" required minlength="8">
-                                                        <button class="btn btn-outline-secondary btn-sm toggle-password" type="button">
-                                                            <i class="bi bi-eye"></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <button type="button" class="btn btn-primary btn-sm icon-btn"
-                                                        onclick="handlePasswordChange(this.form)">
-                                                    <i class="bi bi-check-lg"></i>
-                                                    Update
-                                                </button>
-                                                <button type="button" class="btn btn-secondary btn-sm icon-btn"
-                                                        onclick="hideInlinePasswordForm(this)">
-                                                    <i class="bi bi-x-lg"></i>
-                                                    Cancel
-                                                </button>
-                                            </form>
-                                            <div class="feedback-message mt-2" style="display: none;"></div>
                                         </div>
                                     </td>
                                 </tr>
@@ -590,7 +562,8 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                 </div>
                 <div class="modal-footer"
                      style="position: absolute; bottom: 0; left: 0; right: 0; background-color: white; border-top: 1px solid #dee2e6;">
-                    <button type="button" class="btn btn-info icon-btn me-auto" data-bs-dismiss="modal" id="viewUsageGraphBtn">
+                    <button type="button" class="btn btn-info icon-btn me-auto" data-bs-dismiss="modal"
+                            id="viewUsageGraphBtn">
                         <i class="bi bi-bar-chart-line"></i>
                         Usage Graph
                     </button>
@@ -604,7 +577,8 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
     </div>
 
     <!-- Delete User Confirmation Modal - Secondary modal for confirming user deletion -->
-    <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+    <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel"
+         aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-danger text-white">
@@ -612,7 +586,8 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                         <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
                         Confirm User Deletion
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
                 </div>
                 <div class="modal-body py-4">
                     <div class="d-flex align-items-center">
@@ -644,8 +619,67 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
         </div>
     </div>
 
+    <!-- Change Password Modal -->
+    <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="changePasswordModalLabel">
+                        <i class="bi bi-key-fill me-2" aria-hidden="true"></i>
+                        Change Password
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <div class="d-flex align-items-center">
+                        <div class="text-primary fs-3 me-3" aria-hidden="true">
+                            <i class="bi bi-key-fill"></i>
+                        </div>
+                        <div>
+                            <p class="mb-0 fs-5">
+                                Change password for user "<span id="changePasswordUsername"></span>"
+                            </p>
+                            <p class="text-muted small mb-0 mt-2">
+                                Password must be at least 8 characters.
+                            </p>
+                        </div>
+                    </div>
+                    <form id="changePasswordForm" class="mt-4">
+                        <!-- Ensure the field names match the backend expectations -->
+                        <input type="hidden" name="change_password_username" id="changePasswordUsernameInput">
+                        <div class="input-group mb-3">
+                        <span class="input-group-text">
+                            <i class="bi bi-key"></i>
+                        </span>
+                            <input type="password" class="form-control" name="new_password" placeholder="New Password"
+                                   required minlength="8">
+                            <button class="btn btn-outline-secondary toggle-password" type="button">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="feedback-message" style="display: none;"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary icon-btn" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                        Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary icon-btn"
+                            onclick="handlePasswordChange(document.getElementById('changePasswordForm'))">
+                        <i class="bi bi-check-lg" aria-hidden="true"></i>
+                        Change Password
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Usage Graph Modal -->
-    <div class="modal fade" id="usageGraphModal" tabindex="-1" aria-labelledby="usageGraphModalLabel" aria-hidden="true">
+    <div class="modal fade" id="usageGraphModal" tabindex="-1" aria-labelledby="usageGraphModalLabel"
+         aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -658,7 +692,7 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                 <div class="modal-body" style="min-height: 500px;">
                     <!-- Hidden field to store selected username -->
                     <input type="hidden" id="graphModalUsername" value="">
-                    
+
                     <!-- React component will be rendered here -->
                     <div id="usageGraphContainer"></div>
                 </div>
@@ -694,7 +728,7 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
             notificationArea.style.display = 'block';
 
             // Scroll to the notification
-            alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            alertDiv.scrollIntoView({behavior: 'smooth', block: 'center'});
 
             // Remove after a delay
             setTimeout(() => {
@@ -716,14 +750,7 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
 
         // Show feedback messages in forms
         function showFormFeedback(form, message, type) {
-            // For the main add user form, use the main notification area
-            if (form.id === 'addUserForm') {
-                showAlert(message, type);
-                return;
-            }
-
-            // For other forms (like password change), use inline feedback
-            const feedbackContainer = form.closest('form, div').querySelector('.feedback-message');
+            const feedbackContainer = form.querySelector('.feedback-message');
             if (feedbackContainer) {
                 feedbackContainer.innerHTML = `<div class="alert alert-${type} py-2 px-3 mb-0">${message}</div>`;
                 feedbackContainer.style.display = 'block';
@@ -744,7 +771,7 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
         document.addEventListener('DOMContentLoaded', function () {
             // Setup password toggle buttons
             document.querySelectorAll('.toggle-password').forEach(button => {
-                button.addEventListener('click', function() {
+                button.addEventListener('click', function () {
                     const input = this.closest('.input-group').querySelector('input[type="password"], input[type="text"]');
                     const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
                     input.setAttribute('type', type);
@@ -830,37 +857,10 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                                             <i class="bi bi-trash"></i>
                                             Delete
                                         </button>
-                                        <button type="button" class="btn btn-secondary btn-sm icon-btn w-100 w-md-auto change-password-btn" onclick="showInlinePasswordForm('${username}')">
+                                        <button type="button" class="btn btn-primary btn-sm icon-btn w-100 w-md-auto" onclick="showChangePasswordModal('${username}')">
                                             <i class="bi bi-key"></i>
                                             Password
                                         </button>
-                                    </div>
-                                    <div class="password-change-container mt-2" style="display: none;">
-                                        <form class="d-flex gap-2 align-items-start password-change-form">
-                                            <input type="hidden" name="change_password_username" value="${username}">
-                                            <div class="flex-grow-1">
-                                                <div class="input-group input-group-sm">
-                                                    <span class="input-group-text">
-                                                        <i class="bi bi-key"></i>
-                                                    </span>
-                                                    <input type="password" class="form-control form-control-sm" name="new_password" placeholder="New Password" required minlength="8">
-                                                    <button class="btn btn-outline-secondary btn-sm toggle-password" type="button">
-                                                        <i class="bi bi-eye"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <button type="button" class="btn btn-primary btn-sm icon-btn"
-                                                    onclick="handlePasswordChange(this.form)">
-                                                <i class="bi bi-check-lg"></i>
-                                                Update
-                                            </button>
-                                            <button type="button" class="btn btn-secondary btn-sm icon-btn"
-                                                    onclick="hideInlinePasswordForm(this)">
-                                                <i class="bi bi-x-lg"></i>
-                                                Cancel
-                                            </button>
-                                        </form>
-                                        <div class="feedback-message mt-2" style="display: none;"></div>
                                     </div>
                                 </td>
                             `;
@@ -881,7 +881,7 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                             // Attach event listener to the new password toggle button
                             const toggleButton = newRow.querySelector('.toggle-password');
                             if (toggleButton) {
-                                toggleButton.addEventListener('click', function() {
+                                toggleButton.addEventListener('click', function () {
                                     const input = this.closest('.input-group').querySelector('input[type="password"], input[type="text"]');
                                     const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
                                     input.setAttribute('type', type);
@@ -908,36 +908,36 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
 
             // Set up the button to view usage graphs
             const viewUsageGraphBtn = document.getElementById('viewUsageGraphBtn');
-            
+
             if (viewUsageGraphBtn) {
-                viewUsageGraphBtn.addEventListener('click', function() {
+                viewUsageGraphBtn.addEventListener('click', function () {
                     // Get the first user in the table or default to the current user
                     const userRows = document.querySelectorAll('#usersModal table tbody tr');
                     let username = '<?php echo htmlspecialchars($currentUsername); ?>';
-                    
+
                     if (userRows.length > 0) {
                         username = userRows[0].dataset.username || username;
                     }
-                    
+
                     // Set the username in the hidden field
                     document.getElementById('graphModalUsername').value = username;
-                    
+
                     // Show the graph modal
                     const graphModal = new bootstrap.Modal(document.getElementById('usageGraphModal'));
                     graphModal.show();
                 });
             }
-            
+
             // When the graph modal is shown, render the React component
             const usageGraphModal = document.getElementById('usageGraphModal');
             if (usageGraphModal) {
-                usageGraphModal.addEventListener('shown.bs.modal', function() {
+                usageGraphModal.addEventListener('shown.bs.modal', function () {
                     // Prevent body scrolling
                     document.body.style.overflow = 'hidden';
                 });
-                
+
                 // Restore body scrolling when modal is hidden
-                usageGraphModal.addEventListener('hidden.bs.modal', function() {
+                usageGraphModal.addEventListener('hidden.bs.modal', function () {
                     document.body.style.overflow = '';
                 });
             }
@@ -968,10 +968,10 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
         async function handleDeleteUser(username) {
             try {
                 // First, update the button to show a loading state
-                const deleteButton = document.querySelector('#deleteUserModal #confirmDeleteScheduleBtn');
+                const deleteButton = document.querySelector('#deleteUserModal #confirmDeleteUserBtn');
                 if (deleteButton) {
                     deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Deleting...';
-                    deleteButton.disabled = true;
+                    deleteButton.classList.add('disabled');
                 }
 
                 const formData = new FormData();
@@ -1011,7 +1011,7 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                 showAlert('Error deleting user', 'danger');
             } finally {
                 // Reset the button state if needed
-                const deleteButton = document.querySelector('#deleteUserModal #confirmDeleteScheduleBtn');
+                const deleteButton = document.querySelector('#deleteUserModal #confirmDeleteUserBtn');
                 if (deleteButton) {
                     deleteButton.innerHTML = '<i class="bi bi-trash"></i> Delete';
                     deleteButton.classList.remove('disabled');
@@ -1026,35 +1026,36 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
             // Client-side validation
             const password = formData.get('new_password');
             if (password.length < 8) {
-                // For password change forms, show feedback inline
-                const feedbackContainer = form.closest('.password-change-container').querySelector('.feedback-message');
-                if (feedbackContainer) {
-                    feedbackContainer.innerHTML = `<div class="alert alert-danger py-2 px-3 mb-0">Password must be at least 8 characters</div>`;
-                    feedbackContainer.style.display = 'block';
-
-                    setTimeout(() => {
-                        feedbackContainer.style.display = 'none';
-                    }, 3000);
-                }
+                showFormFeedback(form, 'Password must be at least 8 characters', 'danger');
                 return;
             }
 
             try {
+                // Log the form data being sent
+                console.log('Sending form data:', {
+                    change_password_username: formData.get('change_password_username'),
+                    new_password: formData.get('new_password')
+                });
+
                 const response = await fetch('user_actions.php?action=change_password', {
                     method: 'POST',
                     body: formData
                 });
 
+                // Log the response from the server
                 const result = await response.json();
+                console.log('Server response:', result);
 
                 if (result.success) {
-                    // Send notification to main area
                     showAlert('Password changed successfully!', 'success');
 
-                    // Hide the form after a short delay
-                    setTimeout(() => {
-                        hideInlinePasswordForm(form.querySelector('button[type="button"]'));
-                    }, 1500);
+                    // Hide the modal after a short delay
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
+                    if (modal) {
+                        setTimeout(() => {
+                            modal.hide();
+                        }, 1500);
+                    }
                 } else {
                     showFormFeedback(form, result.message || 'Error changing password', 'danger');
                 }
@@ -1073,53 +1074,17 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
             modalInstance.show();
         }
 
-        // Function to show the inline password change form
-        function showInlinePasswordForm(username) {
-            // Hide all other password forms first
-            document.querySelectorAll('.password-change-container').forEach(container => {
-                container.style.display = 'none';
-            });
-            document.querySelectorAll('.action-buttons-container').forEach(container => {
-                container.style.display = 'flex';
-            });
+        // Function to show the change password modal
+        function showChangePasswordModal(username) {
+            const modal = document.getElementById('changePasswordModal');
+            const usernameSpan = document.getElementById('changePasswordUsername');
+            const usernameInput = document.getElementById('changePasswordUsernameInput');
 
-            // Show the selected password form and hide its action buttons
-            const row = document.querySelector(`tr[data-username="${username}"]`);
-            const passwordContainer = row.querySelector('.password-change-container');
-            const buttonsContainer = row.querySelector('.action-buttons-container');
+            usernameSpan.textContent = username;
+            usernameInput.value = username;
 
-            // Show with animation
-            passwordContainer.style.display = 'block';
-            passwordContainer.style.opacity = '0';
-            setTimeout(() => {
-                passwordContainer.style.transition = 'opacity 0.3s ease';
-                passwordContainer.style.opacity = '1';
-            }, 10);
-
-            buttonsContainer.style.display = 'none';
-        }
-
-        // Function to hide the inline password change form
-        function hideInlinePasswordForm(cancelButton) {
-            const container = cancelButton.closest('.password-change-container');
-            const buttonsContainer = container.previousElementSibling;
-            const form = container.querySelector('form');
-
-            // Hide with animation
-            container.style.transition = 'opacity 0.3s ease';
-            container.style.opacity = '0';
-
-            setTimeout(() => {
-                container.style.display = 'none';
-                buttonsContainer.style.display = 'flex';
-                form.reset();
-
-                // Clear any feedback messages
-                const feedback = container.querySelector('.feedback-message');
-                if (feedback) {
-                    feedback.style.display = 'none';
-                }
-            }, 300);
+            const modalInstance = new bootstrap.Modal(modal);
+            modalInstance.show();
         }
 
         // Prevent body scrolling when modal is open
