@@ -1079,9 +1079,15 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
             const modal = document.getElementById('changePasswordModal');
             const usernameSpan = document.getElementById('changePasswordUsername');
             const usernameInput = document.getElementById('changePasswordUsernameInput');
+            const passwordForm = document.getElementById('changePasswordForm');
 
             usernameSpan.textContent = username;
             usernameInput.value = username;
+
+            // Reset the password field
+            if (passwordForm) {
+                passwordForm.reset();
+            }
 
             const modalInstance = new bootstrap.Modal(modal);
             modalInstance.show();
