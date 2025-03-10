@@ -634,7 +634,7 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                         <i class="bi bi-x-lg" aria-hidden="true"></i>
                         Cancel
                     </button>
-                    <button type="button" class="btn btn-danger icon-btn" id="confirmDeleteScheduleBtn"
+                    <button type="button" class="btn btn-danger icon-btn" id="confirmDeleteUserBtn"
                             onclick="handleDeleteUser(document.getElementById('deleteUserName').textContent)">
                         <i class="bi bi-trash" aria-hidden="true"></i>
                         Delete
@@ -971,7 +971,7 @@ function renderUserManagementModal(array $users, string $currentUsername): strin
                 const deleteButton = document.querySelector('#deleteUserModal #confirmDeleteScheduleBtn');
                 if (deleteButton) {
                     deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Deleting...';
-                    deleteButton.classList.add('disabled');
+                    deleteButton.disabled = true;
                 }
 
                 const formData = new FormData();
