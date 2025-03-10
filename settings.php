@@ -550,7 +550,7 @@ function renderSettingsModal($settings)
                                                 <a href="vlc_handlers/mac_vlc_handler.zip"
                                                    class="btn btn-outline-primary icon-btn mb-3">
                                                     <i class="bi bi-cloud-download me-2"></i>
-                                                    Download Mac VLC Handler
+                                                    Download VLC Handler
                                                 </a>
                                                 <p class="text-muted">
                                                     This VLC handler enables seamless integration with the BLIVE RePlay
@@ -571,7 +571,7 @@ function renderSettingsModal($settings)
                                                 <a href="vlc_handlers/windows_vlc_handler.zip"
                                                    class="btn btn-outline-primary icon-btn mb-3">
                                                     <i class="bi bi-cloud-download me-2"></i>
-                                                    Download Windows VLC Handler
+                                                    Download VLC Handler
                                                 </a>
                                                 <p class="text-muted">
                                                     This VLC handler enables seamless integration with the BLIVE RePlay
@@ -604,7 +604,7 @@ function renderSettingsModal($settings)
                                                 <a href="vlc_handlers/mac_close_chrome_vlc.zip"
                                                    class="btn btn-outline-primary icon-btn mb-3">
                                                     <i class="bi bi-cloud-download me-2"></i>
-                                                    Download Mac Auto-Close Handler
+                                                    Download Auto-Close Handler
                                                 </a>
                                                 <p class="text-muted">
                                                     This handler automatically closes Chrome and VLC and is intended to
@@ -636,7 +636,7 @@ function renderSettingsModal($settings)
                                                 <a href="vlc_handlers/windows_close_chrome_vlc.zip"
                                                    class="btn btn-outline-primary icon-btn mb-3">
                                                     <i class="bi bi-cloud-download me-2"></i>
-                                                    Download Windows Auto-Close Handler
+                                                    Download Auto-Close Handler
                                                 </a>
                                                 <p class="text-muted">
                                                     This handler automatically closes Chrome and VLC and is intended to
