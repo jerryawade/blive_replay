@@ -139,6 +139,7 @@ try {
     $newSettings = [
         'server_url' => rtrim($_POST['server_url'], '/'),
         'live_stream_url' => $_POST['live_stream_url'],
+        'open_webpage_for_livestream' => $_POST['open_webpage_for_livestream'] ?? false,
         'srt_url' => $_POST['srt_url'],
         'stream_check_interval' => max(1, min(60, (int)$_POST['stream_check_interval'])),
         'show_recordings' => $_POST['show_recordings'],

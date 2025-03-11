@@ -53,6 +53,9 @@ class SchedulerService
         $this->activityLogger = new ActivityLogger();
         $this->settingsManager = new SettingsManager();
         $this->settings = $this->settingsManager->getSettings();
+        
+        // Initialize the email service
+        $this->emailService = new EmailService($this->settings);
 
         // Set timezone from settings
         date_default_timezone_set($this->settings['timezone'] ?? 'America/Chicago');

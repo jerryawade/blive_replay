@@ -7,6 +7,7 @@ class SettingsManager
     private $defaultSettings = [
         'server_url' => 'http://yourdomain.com',
         'live_stream_url' => 'vlc://yourdomain.com',
+        'open_webpage_for_livestream' => false,
         'srt_url' => '',
         'stream_check_interval' => 5,
         'show_recordings' => true,
@@ -254,6 +255,17 @@ function renderSettingsModal($settings)
                                                 <label class="form-check-label" for="show_livestream">
                                                     <i class="bi bi-broadcast me-2"></i>
                                                     Show Live Stream link
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" id="open_webpage_for_livestream"
+                                                       name="open_webpage_for_livestream"
+                                                    <?php echo isset($settings['open_webpage_for_livestream']) && $settings['open_webpage_for_livestream'] ? 'checked' : ''; ?>>
+                                                <label class="form-check-label" for="open_webpage_for_livestream">
+                                                    <i class="bi bi-window-plus me-2"></i>
+                                                    Open VLC webpage when clicking Live Stream
                                                 </label>
                                             </div>
                                         </div>
