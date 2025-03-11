@@ -11,8 +11,8 @@
 
         <?php if (isAdmin() || (isset($settings['show_livestream']) && $settings['show_livestream'])): ?>
             <div class="landing-option">
-                <a href="<?php echo htmlspecialchars($formattedStreamUrl); ?>" 
-                   onclick="logLiveStreamClick(event)"
+                <a href="<?php echo htmlspecialchars($formattedStreamUrl); ?>"
+                   onclick="logLiveStreamClick(event, <?php echo $settings['open_webpage_for_livestream'] ? 'true' : 'false'; ?>)"
                    class="text-decoration-none">
                     <img src="assets/imgs/live-stream-icon.png" alt="Live Stream" class="landing-image">
                     <h3>LIVE STREAM</h3>

@@ -74,7 +74,7 @@
         });
     }
 
-    function logLiveStreamClick(event) {
+    function logLiveStreamClick(event, openWebpage) {
         const now = new Date();
         const timestamp = now.toISOString().slice(0, 19).replace('T', ' ');
 
@@ -85,8 +85,16 @@
             },
             body: `action=livestream_click&timestamp=${encodeURIComponent(timestamp)}`
         }).then(() => {
-            if (document.getElementById('activityLogModal').classList.contains('show')) {
+            if (document.getElementById('activityLogModal') &&
+                document.getElementById('activityLogModal').classList.contains('show')) {
                 refreshLogEntries();
+            }
+
+            // Open the webpage in a new tab after a delay if enabled
+            if (openWebpage && window.vlcWebpageUrl) {
+                setTimeout(() => {
+                    window.open(window.vlcWebpageUrl, '_blank');
+                }, 5000); // 5000 milliseconds = 5 seconds
             }
         });
     }
@@ -146,7 +154,7 @@
 
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
-<script src="recordings_update.js"></script>
+<script src="./assets/js/recordings_update.js"></script>
 
 <?php if (isAdmin() && isset($settings['enable_scheduler']) && $settings['enable_scheduler']): ?>
 <!-- This script inclusion should be handled by index.php instead of hardcoded here -->
