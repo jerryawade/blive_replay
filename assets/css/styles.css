@@ -338,6 +338,93 @@ body {
     .btn-group .icon-btn {
         min-width: auto;
     }
+
+    /* Manage Users Table Mobile Adjustments */
+    #usersModal .table-responsive {
+        overflow-x: hidden; /* Remove horizontal scroll for cleaner look */
+    }
+
+    #usersModal .table {
+        display: block;
+        width: 100%;
+        margin-bottom: 0;
+    }
+
+    #usersModal .table thead {
+        display: none; /* Hide headers on mobile as they'll be implied by layout */
+    }
+
+    #usersModal .table tbody,
+    #usersModal .table tr,
+    #usersModal .table td {
+        display: block;
+        width: 100%;
+    }
+
+    #usersModal .table tr {
+        border: 1px solid #dee2e6;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        background-color: #fff;
+        border-radius: 0.25rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    #usersModal .table td {
+        padding: 0.5rem;
+        border: none; /* Remove cell borders for cleaner stacking */
+    }
+
+    /* Username Cell */
+    #usersModal .table td:first-child {
+        font-weight: bold;
+        font-size: 1.1rem;
+        padding-bottom: 0.25rem;
+        border-bottom: 1px solid #e9ecef; /* Separator between username and other info */
+    }
+
+    /* Role Cell */
+    #usersModal .table td:nth-child(2) {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+
+    /* Actions Cell */
+    #usersModal .table td:nth-child(3) {
+        padding-top: 0;
+    }
+
+    #usersModal .action-buttons-container {
+        flex-direction: column !important; /* Stack buttons vertically */
+        gap: 0.5rem;
+    }
+
+    #usersModal .action-buttons-container .btn {
+        width: 100%; /* Full width buttons */
+        margin: 0; /* Remove default button margin */
+    }
+
+    /* Ensure role select form fits nicely and icon aligns */
+    #usersModal .role-change-form .input-group {
+        display: flex !important; /* Override Bootstrap if needed */
+        flex-wrap: nowrap !important; /* Prevent wrapping to new line */
+        align-items: center; /* Vertically align icon and select */
+        width: 100%;
+        max-width: 200px; /* Limit width for better appearance */
+        margin: 0 auto;
+    }
+
+    #usersModal .role-change-form .input-group .input-group-text {
+        flex-shrink: 0; /* Prevent icon from shrinking */
+        border-right: none; /* Seamless connection to select */
+        padding: 0.25rem 0.5rem; /* Consistent padding */
+    }
+
+    #usersModal .role-change-form .input-group .form-select {
+        flex-grow: 1; /* Allow select to take remaining space */
+        border-left: none; /* Seamless connection to icon */
+        min-width: 0; /* Prevent overflow */
+    }
 }
 
 /* Print Styles */
