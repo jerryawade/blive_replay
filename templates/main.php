@@ -245,14 +245,25 @@ if (isAdmin()): ?>
         const formId = 'noteForm_' + fileId;
         const form = document.getElementById(formId);
         if (form) {
-            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            const isNowVisible = form.style.display === 'none';
+            form.style.display = isNowVisible ? 'block' : 'none';
+
+            // If showing the form and there's existing text, update the counter
+            if (isNowVisible) {
+                const input = form.querySelector('input[name="note"]');
+                if (input) {
+                    updateCharacterCount(input);
+                }
+            }
         }
     }
 
     function updateCharacterCount(input) {
         const charCount = input.value.length;
         const characterCountElement = input.closest('form').querySelector('.character-count span');
-        characterCountElement.textContent = charCount;
+        if (characterCountElement) {
+            characterCountElement.textContent = charCount;
+        }
     }
 
     async function handleNoteSubmit(event, form) {
@@ -268,7 +279,6 @@ if (isAdmin()): ?>
             const result = await response.json();
 
             if (result.success) {
-                // Update the note display without refreshing
                 const fileName = form.querySelector('[name="recording_file"]').value;
                 const noteText = form.querySelector('[name="note"]').value;
                 const listItem = form.closest('.list-group-item');
@@ -284,11 +294,9 @@ if (isAdmin()): ?>
                     }
                 }
 
-                // Hide the form
                 const fileId = fileName.split('/').pop().replace(/[^a-zA-Z0-9]/g, '_');
                 toggleNoteForm(fileId);
 
-                // Update edit button text
                 const editButton = listItem.querySelector('.btn-info');
                 if (editButton) {
                     editButton.innerHTML = '<i class="bi bi-pencil-square"></i> Edit Note';
