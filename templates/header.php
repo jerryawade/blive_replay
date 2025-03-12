@@ -16,6 +16,7 @@
         <script src="assets/js/recording_controls.js"></script>
         <script src="assets/js/settings.js"></script>
         <script src="assets/js/stream_monitor.js"></script>
+        <script src="assets/js/scheduler_badge.js"></script>
     <?php endif; ?>
 
     <?php if (isAuthenticated()): ?>
