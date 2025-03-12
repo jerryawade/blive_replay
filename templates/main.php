@@ -27,10 +27,12 @@ function getRecordingNote($fileName)
 }
 
 if (isAdmin()): ?>
-    <div id="recordingStatus" class="recording-status <?php echo $recordingActive ? 'recording-active' : 'recording-inactive'; ?>">
+    <div id="recordingStatus"
+         class="recording-status <?php echo $recordingActive ? 'recording-active' : 'recording-inactive'; ?>">
         <div class="d-flex align-items-center flex-wrap gap-2">
             <?php if ($recordingActive): ?>
-                <div class="me-2">⚫</div> <span class="status-text">Recording in Progress (DO NOT refresh your browser!)</span>
+                <div class="me-2">⚫</div> <span
+                        class="status-text">Recording in Progress (DO NOT refresh your browser!)</span>
             <?php else: ?>
                 <span class="status-text">Recording Stopped</span>
             <?php endif; ?>
@@ -51,12 +53,14 @@ if (isAdmin()): ?>
             <i class="bi bi-stop-circle"></i>
             Stop Recording
         </button>
-        &nbsp;
-        <!-- Add this button for the scheduler -->
-        <?php if (isset($settings['enable_scheduler']) && $settings['enable_scheduler']): ?>
-            <button type="button" class="btn btn-info icon-btn" data-bs-toggle="modal" data-bs-target="#scheduleModal">
+        &nbsp;<?php if (isset($settings['enable_scheduler']) && $settings['enable_scheduler']): ?>
+            <button type="button" class="btn btn-info icon-btn position-relative" data-bs-toggle="modal"
+                    data-bs-target="#scheduleModal">
                 <i class="bi bi-calendar"></i>
                 Schedules
+                <span id="nextScheduleBadge"
+                      class="badge bg-danger text-white position-absolute top-0 start-100 translate-middle-x"
+                      style="display: none;"></span>
             </button>
         <?php endif; ?>
     </form>
@@ -91,7 +95,7 @@ if (isAdmin()): ?>
         // Iterate through grouped and sorted recordings
         foreach ($groupedRecordings as $date => $dateRecordings):
             // Sort recordings within each date group by modification time (newest first)
-            usort($dateRecordings, function($a, $b) {
+            usort($dateRecordings, function ($a, $b) {
                 return filemtime($b) - filemtime($a);
             });
             ?>
@@ -142,7 +146,8 @@ if (isAdmin()): ?>
                                             <?php
                                             $note = getRecordingNote($file);
                                             if (!empty($note)): ?>
-                                                <br>Note: <span class="recording-note"><?php echo htmlspecialchars($note); ?></span>
+                                                <br>Note: <span
+                                                        class="recording-note"><?php echo htmlspecialchars($note); ?></span>
                                             <?php endif; ?>
                                         </small>
                                     </div>
@@ -198,7 +203,8 @@ if (isAdmin()): ?>
                                     <?php if (isAdmin() && !$isCurrentlyRecording && !$recordingActive): ?>
                                         <div id="noteForm_<?php echo preg_replace('/[^a-zA-Z0-9]/', '_', $fileName); ?>"
                                              class="mt-2 w-100 border-top pt-2" style="display: none;">
-                                            <form class="d-flex gap-2" onsubmit="handleNoteSubmit(event, this); return false;">
+                                            <form class="d-flex gap-2"
+                                                  onsubmit="handleNoteSubmit(event, this); return false;">
                                                 <input type="hidden" name="recording_file"
                                                        value="<?php echo htmlspecialchars($file); ?>">
                                                 <div class="character-count text-muted">
@@ -208,7 +214,8 @@ if (isAdmin()): ?>
                                                     <span class="input-group-text">
                                                         <i class="bi bi-sticky"></i>
                                                     </span>
-                                                    <input type="text" name="note" class="form-control form-control-sm w-50"
+                                                    <input type="text" name="note"
+                                                           class="form-control form-control-sm w-50"
                                                            maxlength="50"
                                                            value="<?php echo htmlspecialchars(getRecordingNote($file)); ?>"
                                                            placeholder="Enter note for this recording (max 50 characters)"
