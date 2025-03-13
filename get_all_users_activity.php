@@ -13,14 +13,15 @@ if (!isset($_SESSION['authenticated']) || $_SESSION['authenticated'] !== true ||
     exit;
 }
 
-// Include required classes for logging, settings, and user management
-require_once 'logging.php';
+// Include the necessary files
 require_once 'settings.php';
 require_once 'user_management.php';
+require_once 'activity_log_archiver.php';
 
 // Initialize settings manager and retrieve application settings
 $settingsManager = new SettingsManager();
 $settings = $settingsManager->getSettings();
+
 // Set the timezone from settings, defaulting to 'America/Chicago' if not specified
 $timezone = $settings['timezone'] ?? 'America/Chicago';
 date_default_timezone_set($timezone);
@@ -35,93 +36,73 @@ if (!in_array($timeRange, $validTimeRanges)) {
     exit;
 }
 
-// Initialize date objects for the time range boundaries
-$cutoffDate = new DateTime(); // Start of the time range
-$endDate = new DateTime();    // End of the time range (current time)
-// Adjust cutoff date based on the selected time range
-switch ($timeRange) {
-    case 'day':
-        // For 'day', set the cutoff to midnight today to count only today's activities
-        $cutoffDate->setTime(0, 0, 0);
-        break;
-    case 'week':
-        // For 'week', go back 7 days from now
-        $cutoffDate->modify('-7 days');
-        break;
-    case 'month':
-        // For 'month', approximate as 30 days back
-        $cutoffDate->modify('-30 days');
-        break;
-    case 'year':
-        // For 'year', go back 365 days (ignores leap years for simplicity)
-        $cutoffDate->modify('-365 days');
-        break;
-}
+// Use the activity log archiver to get the analytics data
+$archiver = new ActivityLogArchiver();
+$analyticsData = $archiver->getAnalytics(null, $timeRange);
 
-// Instantiate activity logger and user manager for data retrieval
-$activityLogger = new ActivityLogger();
+// Instantiate user manager for data retrieval
 $userManager = new UserManager();
 
 // Fetch all users and extract their usernames
 $users = $userManager->getUsers();
 $usernames = array_keys($users);
-// Retrieve all logged activities (assumes ActivityLogger handles the data source)
-$allActivities = $activityLogger->getActivities(null);
 
-// Initialize arrays to store user activity counts and chart data
-$userData = [];
+// Calculate start and end dates for the time range for inclusion in the response
+$endDate = new DateTime();
+$cutoffDate = new DateTime();
+
+// Adjust cutoff date based on the selected time range
+switch ($timeRange) {
+    case 'day':
+        $cutoffDate->setTime(0, 0, 0);
+        break;
+    case 'week':
+        $cutoffDate->modify('-7 days');
+        break;
+    case 'month':
+        $cutoffDate->modify('-30 days');
+        break;
+    case 'year':
+        $cutoffDate->modify('-365 days');
+        break;
+}
+
+// Prepare arrays for chart data
+$chartUsernames = [];
 $videoPlays = [];
 $livestreamViews = [];
 
-// Prepopulate user data with zero counts for video plays and livestream views
+// Make sure all users are represented in data arrays, even if they have no activity
 foreach ($usernames as $username) {
-    $userData[$username] = [
-        'played_vlc' => 0,       // Tracks video plays
-        'livestream_click' => 0  // Tracks livestream views
-    ];
+    $chartUsernames[] = $username;
+
+    // Get values from analytics data or default to 0
+    $plays = isset($analyticsData['videoPlays'][$username]) ?
+        $analyticsData['videoPlays'][$username] : 0;
+
+    $views = isset($analyticsData['livestreamViews'][$username]) ?
+        $analyticsData['livestreamViews'][$username] : 0;
+
+    $videoPlays[] = $plays;
+    $livestreamViews[] = $views;
 }
 
-// Process each activity and count relevant actions within the time range
-foreach ($allActivities as $activity) {
-    // Skip if the username isn't recognized or the action isn't relevant
-    if (!isset($userData[$activity['username']]) ||
-        ($activity['action'] !== 'played_vlc' && $activity['action'] !== 'livestream_click')) {
-        continue;
-    }
-
-    // Convert activity timestamp to a DateTime object for comparison
-    $activityDate = new DateTime($activity['timestamp']);
-    // Skip if the activity falls outside the defined time range
-    if ($activityDate < $cutoffDate || $activityDate > $endDate) {
-        continue;
-    }
-
-    // Increment the count for the specific action
-    $userData[$activity['username']][$activity['action']]++;
-}
-
-// Prepare data arrays for the chart by extracting counts for each user
-foreach ($usernames as $username) {
-    $videoPlays[] = $userData[$username]['played_vlc'];
-    $livestreamViews[] = $userData[$username]['livestream_click'];
-}
-
-// Calculate total activity per user for sorting purposes
+// Calculate total activity for sorting
 $totalActivity = [];
-foreach ($usernames as $index => $username) {
+foreach ($chartUsernames as $index => $username) {
     $totalActivity[$index] = $videoPlays[$index] + $livestreamViews[$index];
 }
 
-// Sort users by total activity in descending order, maintaining array associations
-array_multisort($totalActivity, SORT_DESC, $usernames, $videoPlays, $livestreamViews);
+// Sort arrays by total activity (descending)
+array_multisort($totalActivity, SORT_DESC, $chartUsernames, $videoPlays, $livestreamViews);
 
-// Return the aggregated data as JSON, including time range boundaries for debugging
+// Return the results as JSON
 echo json_encode([
     'success' => true,
-    'users' => $usernames,              // List of usernames
-    'videoPlays' => $videoPlays,        // Video play counts per user
-    'livestreamViews' => $livestreamViews, // Livestream view counts per user
-    'timeRange' => $timeRange,          // Selected time range
-    'cutoffDate' => $cutoffDate->format('Y-m-d H:i:s'), // Start of the time range
-    'endDate' => $endDate->format('Y-m-d H:i:s')        // End of the time range
+    'users' => $chartUsernames,
+    'videoPlays' => $videoPlays,
+    'livestreamViews' => $livestreamViews,
+    'timeRange' => $timeRange,
+    'cutoffDate' => $cutoffDate->format('Y-m-d H:i:s'),
+    'endDate' => $endDate->format('Y-m-d H:i:s')
 ]);

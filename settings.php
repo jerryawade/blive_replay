@@ -132,6 +132,13 @@ function renderSettingsModal($settings)
                                     <i class="bi bi-download me-1"></i> Downloads
                                 </button>
                             </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="cron-tab" data-bs-toggle="tab"
+                                        data-bs-target="#cron-config" type="button" role="tab"
+                                        aria-controls="cron-config" aria-selected="false">
+                                    <i class="bi bi-clock-history me-1"></i> Cron
+                                </button>
+                            </li>
                         </ul>
 
                         <!-- Tab Content -->
@@ -260,7 +267,8 @@ function renderSettingsModal($settings)
                                         </div>
                                         <div class="mb-2">
                                             <div class="form-check">
-                                                <input type="checkbox" class="form-check-input" id="open_webpage_for_livestream"
+                                                <input type="checkbox" class="form-check-input"
+                                                       id="open_webpage_for_livestream"
                                                        name="open_webpage_for_livestream"
                                                     <?php echo isset($settings['open_webpage_for_livestream']) && $settings['open_webpage_for_livestream'] ? 'checked' : ''; ?>>
                                                 <label class="form-check-label" for="open_webpage_for_livestream">
@@ -549,7 +557,9 @@ function renderSettingsModal($settings)
                                 </div>
                             </div>
 
-                            <div class="tab-pane fade" id="downloads-config" role="tabpanel">
+                            <!-- Downloads Tab -->
+                            <div class="tab-pane fade" id="downloads-config" role="tabpanel"
+                                 aria-labelledby="downloads-tab">
                                 <div class="card mb-4">
                                     <div class="card-header">
                                         <i class="bi bi-download me-2"></i>
@@ -603,7 +613,7 @@ function renderSettingsModal($settings)
                                     </div>
                                 </div>
 
-                                <!-- New Auto-Close Handlers section -->
+                                <!-- Auto-Close Handlers Section -->
                                 <div class="card">
                                     <div class="card-header">
                                         <i class="bi bi-power me-2"></i>
@@ -672,6 +682,77 @@ function renderSettingsModal($settings)
                                 </div>
                             </div>
 
+                            <!-- Cron Tab -->
+                            <div class="tab-pane fade" id="cron-config" role="tabpanel" aria-labelledby="cron-tab">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <i class="bi bi-clock-history me-2"></i>
+                                        Cron Job Management
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="text-muted mb-4">Manage cron jobs for background services. These
+                                            scripts must be run with sudo privileges.
+                                            From a terminal add 'www-data ALL=(ALL) NOPASSWD: ALL' via sudo visudo,
+                                            without the quotes, on the server.</p>
+
+                                        <?php
+                                        // Check cron job status
+                                        $logArchiverCron = shell_exec('sudo crontab -l 2>/dev/null | grep "activity_log_archiver.php"');
+                                        $schedulerCron = shell_exec('sudo crontab -l 2>/dev/null | grep "scheduler_service.php"');
+                                        $streamMonitorCron = shell_exec('sudo crontab -l 2>/dev/null | grep "stream_monitor_service.php"');
+
+                                        // Log Archiver Cron
+                                        $logArchiverInstalled = !empty(trim($logArchiverCron));
+                                        ?>
+                                        <div class="mb-3">
+                                            <button type="button"
+                                                    class="btn btn-outline-primary btn-sm icon-btn install-cron-btn"
+                                                    data-script="install_log_archiver_cron.sh"
+                                                <?php echo $logArchiverInstalled ? 'disabled' : ''; ?>>
+                                                <i class="bi bi-gear me-2"></i>
+                                                Install Log Archiver Cron
+                                            </button>
+                                            <span class="cron-status ms-2 <?php echo $logArchiverInstalled ? 'text-success' : 'text-muted'; ?>">
+                                                <?php echo $logArchiverInstalled ? '<i class="bi bi-check-circle me-1"></i> Installed: ' . htmlspecialchars(trim($logArchiverCron)) : 'Not Installed'; ?>
+                                            </span>
+                                        </div>
+
+                                        <?php
+                                        // Scheduler Service Cron
+                                        $schedulerInstalled = !empty(trim($schedulerCron));
+                                        ?>
+                                        <div class="mb-3">
+                                            <button type="button"
+                                                    class="btn btn-outline-primary btn-sm icon-btn install-cron-btn"
+                                                    data-script="install_scheduler_service_cron.sh"
+                                                <?php echo $schedulerInstalled ? 'disabled' : ''; ?>>
+                                                <i class="bi bi-gear me-2"></i>
+                                                Install Scheduler Service Cron
+                                            </button>
+                                            <span class="cron-status ms-2 <?php echo $schedulerInstalled ? 'text-success' : 'text-muted'; ?>">
+                                                <?php echo $schedulerInstalled ? '<i class="bi bi-check-circle me-1"></i> Installed: ' . htmlspecialchars(trim($schedulerCron)) : 'Not Installed'; ?>
+                                            </span>
+                                        </div>
+
+                                        <?php
+                                        // Stream Monitor Service Cron
+                                        $streamMonitorInstalled = !empty(trim($streamMonitorCron));
+                                        ?>
+                                        <div class="mb-3">
+                                            <button type="button"
+                                                    class="btn btn-outline-primary btn-sm icon-btn install-cron-btn"
+                                                    data-script="install_stream_monitor_service_cron.sh"
+                                                <?php echo $streamMonitorInstalled ? 'disabled' : ''; ?>>
+                                                <i class="bi bi-gear me-2"></i>
+                                                Install Stream Monitor Service Cron
+                                            </button>
+                                            <span class="cron-status ms-2 <?php echo $streamMonitorInstalled ? 'text-success' : 'text-muted'; ?>">
+                                                <?php echo $streamMonitorInstalled ? '<i class="bi bi-check-circle me-1"></i> Installed: ' . htmlspecialchars(trim($streamMonitorCron)) : 'Not Installed'; ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -737,7 +818,7 @@ function renderSettingsModal($settings)
             }, 400);
         });
 
-        // Toggle SMTP settings visibility based on checkbox
+        // Toggle SMTP settings visibility based on checkbox and handle cron installations
         document.addEventListener('DOMContentLoaded', function () {
             const emailNotificationsCheckbox = document.getElementById('email_notifications_enabled');
             const smtpContainer = document.getElementById('smtp_settings_container');
@@ -847,6 +928,50 @@ function renderSettingsModal($settings)
                     }
                 }
             }
+
+            // Handle cron installation buttons
+            const installButtons = document.querySelectorAll('.install-cron-btn');
+            installButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    const scriptName = this.getAttribute('data-script');
+                    const statusSpan = this.nextElementSibling;
+
+                    // Show loading state
+                    this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Installing...';
+                    this.disabled = true;
+
+                    // Make AJAX request to run the script
+                    fetch('run_cron_install.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `script=${encodeURIComponent(scriptName)}`
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Update UI to show installed status
+                                statusSpan.innerHTML = `<i class="bi bi-check-circle me-1"></i> Installed: ${data.cron_line}`;
+                                statusSpan.className = 'cron-status ms-2 text-success';
+                                this.disabled = true; // Keep button disabled
+                                this.innerHTML = '<i class="bi bi-gear me-2"></i> Install ' + scriptName.replace('install_', '').replace('_cron.sh', '').replace(/_/g, ' ');
+                            } else {
+                                // Show error
+                                statusSpan.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i> Error: ${data.message}`;
+                                statusSpan.className = 'cron-status ms-2 text-danger';
+                                this.innerHTML = '<i class="bi bi-gear me-2"></i> Retry ' + scriptName.replace('install_', '').replace('_cron.sh', '').replace(/_/g, ' ');
+                                this.disabled = false; // Re-enable button on failure
+                            }
+                        })
+                        .catch(error => {
+                            statusSpan.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i> Error: ${error.message}`;
+                            statusSpan.className = 'cron-status ms-2 text-danger';
+                            this.innerHTML = '<i class="bi bi-gear me-2"></i> Retry ' + scriptName.replace('install_', '').replace('_cron.sh', '').replace(/_/g, ' ');
+                            this.disabled = false;
+                        });
+                });
+            });
         });
     </script>
     <?php
