@@ -307,8 +307,8 @@ class StreamMonitor {
 
         this.forceRedraw(this.statusIndicator);
         this.statusIndicator.animate([
-            { transform: 'scale(1.2)' },
-            { transform: 'scale(1.0)' }
+            {transform: 'scale(1.2)'},
+            {transform: 'scale(1.0)'}
         ], {
             duration: 300,
             easing: 'ease-out'
@@ -322,9 +322,13 @@ class StreamMonitor {
         this.debug('Forcing stream status check');
         this.checkInProgress = true;
         this.updatesPending = true;
+        this.failureCount = 0; // Reset failure count for fresh check
         this.updateStatusIndicator();
         this.updateStatusText();
-        this.checkStatus(true);
+        this.checkStatus(true).then(() => {
+            // Ensure polling continues after forced check
+            setTimeout(() => this.pollForUpdates(), 1000);
+        });
     }
 
     /**
@@ -352,24 +356,34 @@ class StreamMonitor {
                 if (!data || typeof data.active === 'undefined') {
                     throw new Error('Invalid response from server');
                 }
+
+                this.lastStatus = data;
+
                 if (data.checking) {
                     this.debug("Still checking, maintaining current state");
                     this.checkInProgress = true;
-                    return;
-                }
-                this.lastStatus = data;
-                this.checkInProgress = false;
-                this.updatesPending = false;
-                if (data.active === false) {
-                    this.failureCount++;
+                    this.updateStatusIndicator(data);
+                    this.updateStatusText(data);
                 } else {
-                    this.failureCount = 0;
+                    this.checkInProgress = false;
+                    this.updatesPending = false;
+                    if (data.active === false) {
+                        this.failureCount++;
+                    } else {
+                        this.failureCount = 0;
+                    }
+                    this.updateStatusIndicator(data);
+                    this.updateStatusText(data);
                 }
-                this.updateStatusIndicator(data);
-                this.updateStatusText(data);
             })
             .catch(error => {
                 this.debug(`Error polling for updates: ${error.message}`);
+                this.checkInProgress = false;
+                this.updatesPending = false;
+                if (this.lastStatus) {
+                    this.updateStatusIndicator(this.lastStatus);
+                    this.updateStatusText(this.lastStatus);
+                }
             });
     }
 
@@ -412,22 +426,24 @@ class StreamMonitor {
                 throw new Error('Invalid response from server');
             }
 
-            if (result.checking) {
-                this.debug('Stream check in progress, will continue polling');
-                return;
-            }
-
+            // Update state immediately even if checking
             this.lastStatus = result;
             this.firstCheckDone = true;
-            this.checkInProgress = false;
-            this.updatesPending = false;
-            if (result.active === false) {
-                this.failureCount++;
+
+            if (result.checking) {
+                this.debug('Stream check in progress, will continue polling');
+                this.checkInProgress = true;  // Keep checking state
             } else {
-                this.failureCount = 0;
+                this.checkInProgress = false;
+                this.updatesPending = false;
+                if (result.active === false) {
+                    this.failureCount++;
+                } else {
+                    this.failureCount = 0;
+                }
+                this.updateStatusIndicator(result);
+                this.updateStatusText(result);
             }
-            this.updateStatusIndicator(result);
-            this.updateStatusText(result);
 
             return result;
 
@@ -437,6 +453,8 @@ class StreamMonitor {
                 this.debug('Maintaining previous status due to fetch error');
                 this.checkInProgress = false;
                 this.updatesPending = false;
+                this.updateStatusIndicator(this.lastStatus);
+                this.updateStatusText(this.lastStatus);
                 return this.lastStatus;
             }
 
@@ -450,31 +468,24 @@ class StreamMonitor {
             this.updatesPending = false;
             this.updateStatusIndicator(errorStatus);
             this.updateStatusText(errorStatus);
+            return errorStatus;
         }
     }
 
-    /**
-     * Force DOM redraw for an element
-     */
-    forceRedraw(element) {
-        const originalDisplay = element.style.display;
-        element.style.display = 'none';
-        void element.offsetHeight;
-        element.style.display = originalDisplay;
-
-        element.style.opacity = '0.99';
-        setTimeout(() => {
-            element.style.opacity = '1';
-        }, 20);
-    }
-}
-
 // Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    const isAdmin = document.body.dataset.isAdmin === 'true';
-    if (isAdmin) {
-        const style = document.createElement('style');
-        style.textContent = `
+    document
+.
+
+    addEventListener(
+
+    'DOMContentLoaded'
+,
+
+    function() {
+        const isAdmin = document.body.dataset.isAdmin === 'true';
+        if (isAdmin) {
+            const style = document.createElement('style');
+            style.textContent = `
             @keyframes pulse {
                 0% { transform: scale(1); opacity: 1; }
                 50% { transform: scale(1.1); opacity: 0.7; }
@@ -498,23 +509,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 background-color: #fd7e14 !important;
             }
         `;
-        document.head.appendChild(style);
+            document.head.appendChild(style);
 
-        setTimeout(() => {
-            if (window.streamMonitor) {
-                if (window.streamMonitor.checkInterval) {
-                    clearInterval(window.streamMonitor.checkInterval);
+            setTimeout(() => {
+                if (window.streamMonitor) {
+                    if (window.streamMonitor.checkInterval) {
+                        clearInterval(window.streamMonitor.checkInterval);
+                    }
+                    if (window.streamMonitor.pollInterval) {
+                        clearInterval(window.streamMonitor.pollInterval);
+                    }
+                    if (window.streamMonitor.stabilityTimeout) {
+                        clearTimeout(window.streamMonitor.stabilityTimeout);
+                    }
                 }
-                if (window.streamMonitor.pollInterval) {
-                    clearInterval(window.streamMonitor.pollInterval);
-                }
-                if (window.streamMonitor.stabilityTimeout) {
-                    clearTimeout(window.streamMonitor.stabilityTimeout);
-                }
-            }
 
-            window.streamMonitor = new StreamMonitor();
-            window.streamMonitor.init();
-        }, 500);
+                window.streamMonitor = new StreamMonitor();
+                window.streamMonitor.init();
+            }, 500);
+        }
     }
-});
+
+)
+    ;

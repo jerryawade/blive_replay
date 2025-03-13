@@ -36,7 +36,7 @@ async function updateNextScheduleBadge(force = false) {
                     ? 'Today'
                     : nextRunDate.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
 
-                badge.textContent = `Next Up: ${title}: ${dateStr} ${startTime}-${endTime}`;
+                badge.textContent = `Next: ${title} - ${dateStr} ${startTime}-${endTime}`;
                 badge.style.display = 'inline-block';
                 console.log('Badge updated:', badge.textContent);
             } else {
