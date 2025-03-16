@@ -219,11 +219,22 @@ async function handleAddSchedule(form) {
                 showFormFeedback('scheduleFormFeedback', 'Date is required for one-time schedules', 'danger');
                 return;
             }
-            
+
             // Additional validation to prevent past times for today
-            const today = new Date().toISOString().split('T')[0];
-            if (scheduleData.date === today) {
-                const now = new Date();
+            const now = new Date();
+            const [year, month, day] = scheduleData.date.split('-').map(Number);
+            const scheduleDate = new Date(year, month - 1, day); // Local time only
+
+            const isSameDay =
+                now.getFullYear() === scheduleDate.getFullYear() &&
+                now.getMonth() === scheduleDate.getMonth() &&
+                now.getDate() === scheduleDate.getDate();
+
+            console.log('NOW:', now.toString());
+            console.log('SCHEDULE DATE:', scheduleDate.toString());
+            console.log('isSameDay?', isSameDay);
+
+            if (isSameDay) {
                 const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
                 const startTimeInMinutes = timeToMinutes(scheduleData.startTime);
                 if (startTimeInMinutes <= currentTimeInMinutes) {
@@ -791,11 +802,21 @@ async function saveEditedSchedule(form) {
             const today = new Date().toISOString().split('T')[0];
             if (scheduleData.date === today) {
                 const now = new Date();
-                const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
-                const startTimeInMinutes = timeToMinutes(scheduleData.startTime);
-                if (startTimeInMinutes <= currentTimeInMinutes) {
-                    showFormFeedback('editFormFeedback', 'Start time must be in the future for today\'s date', 'danger');
-                    return;
+                const [year, month, day] = scheduleData.date.split('-').map(Number);
+                const scheduleDate = new Date(year, month - 1, day);
+
+                const isSameDay =
+                    now.getFullYear() === scheduleDate.getFullYear() &&
+                    now.getMonth() === scheduleDate.getMonth() &&
+                    now.getDate() === scheduleDate.getDate();
+
+                if (isSameDay) {
+                    const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+                    const startTimeInMinutes = timeToMinutes(scheduleData.startTime);
+                    if (startTimeInMinutes <= currentTimeInMinutes) {
+                        showFormFeedback('editFormFeedback', 'Start time must be in the future for today\'s date', 'danger');
+                        return;
+                    }
                 }
             }
             break;
