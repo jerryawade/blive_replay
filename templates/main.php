@@ -42,7 +42,7 @@ if (isAdmin()): ?>
         <?php endif; ?>
     </div>
 
-    <form method="post" class="mt-3">
+    <form method="post" class="mt-2">
         <button type="submit" name="start"
                 class="btn btn-success icon-btn" <?php echo $recordingActive ? 'disabled' : ''; ?>>
             <i class="bi bi-record-circle"></i>
@@ -154,7 +154,7 @@ if (isAdmin()): ?>
                                     <div class="d-flex align-items-center flex-wrap gap-2 mt-2">
                                         <!-- Only show Add/Edit Note button if not recording -->
                                         <?php if (!$isCurrentlyRecording && isAdmin() && !$recordingActive): ?>
-                                            <button class="btn btn-info btn-sm icon-btn me-2"
+                                            <button class="btn btn-info btn-sm icon-btn mt-1"
                                                     onclick="toggleNoteForm('<?php echo preg_replace('/[^a-zA-Z0-9]/', '_', $fileName); ?>')"
                                                     type="button">
                                                 <i class="bi bi-pencil-square"></i>
@@ -166,7 +166,7 @@ if (isAdmin()): ?>
                                             <?php if (isAdmin() || (isset($settings['allow_vlc']) && $settings['allow_vlc'])): ?>
                                                 <a href="<?php echo generateVLCUrl($file); ?>"
                                                    onclick="logVLCPlay(event, '<?php echo htmlspecialchars($fileName); ?>')"
-                                                   class="btn btn-primary btn-sm icon-btn me-2">
+                                                   class="btn btn-primary btn-sm icon-btn mt-1">
                                                     <i class="bi bi-play-circle"></i>
                                                     Play Video
                                                 </a>
@@ -174,7 +174,7 @@ if (isAdmin()): ?>
 
                                             <?php if (isAdmin() || (isset($settings['allow_m3u']) && $settings['allow_m3u'])): ?>
                                                 <a href="?getm3u=<?php echo urlencode($fileName); ?>"
-                                                   class="btn btn-secondary btn-sm icon-btn me-2">
+                                                   class="btn btn-secondary btn-sm icon-btn mt-1">
                                                     <i class="bi bi-file-earmark-play"></i>
                                                     Download M3U
                                                 </a>
@@ -182,14 +182,14 @@ if (isAdmin()): ?>
 
                                             <?php if (isAdmin() || (isset($settings['allow_mp4']) && $settings['allow_mp4'])): ?>
                                                 <a href="?download=<?php echo urlencode($fileName); ?>"
-                                                   class="btn btn-success btn-sm icon-btn me-2">
+                                                   class="btn btn-success btn-sm icon-btn mt-1">
                                                     <i class="bi bi-download"></i>
                                                     Download MP4
                                                 </a>
                                             <?php endif; ?>
 
                                             <?php if (isAdmin() && !$recordingActive): ?>
-                                                <button class="btn btn-danger btn-sm icon-btn me-2"
+                                                <button class="btn btn-danger btn-sm icon-btn mt-1"
                                                         data-bs-toggle="modal"
                                                         data-bs-target="#deleteModal"
                                                         data-file="<?php echo urlencode($file); ?>">

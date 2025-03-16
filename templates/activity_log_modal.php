@@ -199,13 +199,13 @@
                     <i class="bi bi-trash"></i>
                     Clear Log
                 </button>
-                <button type="button" class="btn btn-secondary icon-btn" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg"></i>
-                    Close
-                </button>
                 <button type="button" class="btn btn-success icon-btn" onclick="printLog()">
                     <i class="bi bi-printer"></i>
                     Print Log
+                </button>
+                <button type="button" class="btn btn-secondary icon-btn" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i>
+                    Close
                 </button>
             </div>
         </div>
