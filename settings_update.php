@@ -66,7 +66,7 @@ try {
         $_POST[$setting] = isset($_POST[$setting]) && ($_POST[$setting] === '1' || $_POST[$setting] === 'on');
     }
 
-// Validate email notification settings
+    // Validate email notification settings
     if ($_POST['email_notifications_enabled']) {
         // Check if notification email is provided
         if (empty($_POST['scheduler_notification_email'])) {
@@ -135,6 +135,40 @@ try {
         }
     }
 
+    // Process API settings
+    $apiSettings = [
+        'api_enabled' => isset($_POST['api_settings']['api_enabled']) && ($_POST['api_settings']['api_enabled'] === '1' || $_POST['api_settings']['api_enabled'] === 'on'),
+        'enable_control' => isset($_POST['api_settings']['enable_control']) && ($_POST['api_settings']['enable_control'] === '1' || $_POST['api_settings']['enable_control'] === 'on'),
+        'api_key' => trim($_POST['api_settings']['api_key'] ?? ''),
+        'api_port' => (int)($_POST['api_settings']['api_port'] ?? 80),
+    ];
+
+    // Handle allowed IPs - convert comma-separated string to array
+    if (isset($_POST['api_settings']['api_allowed_ips'])) {
+        $allowedIps = array_map('trim', explode(',', $_POST['api_settings']['api_allowed_ips']));
+        $apiSettings['api_allowed_ips'] = array_filter($allowedIps); // Remove empty entries
+    } else {
+        $apiSettings['api_allowed_ips'] = [];
+    }
+
+    // Validate API key if API is enabled
+    if ($apiSettings['api_enabled'] && empty($apiSettings['api_key'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'API key is required when API is enabled'
+        ]);
+        exit;
+    }
+
+    // Validate API port
+    if ($apiSettings['api_port'] < 1 || $apiSettings['api_port'] > 65535) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'API port must be between 1 and 65535'
+        ]);
+        exit;
+    }
+
     // Prepare new settings
     $newSettings = [
         'server_url' => rtrim($_POST['server_url'], '/'),
@@ -161,6 +195,9 @@ try {
         'smtp_password' => $_POST['smtp_password'],
         'smtp_from_email' => $_POST['smtp_from_email'],
         'smtp_from_name' => $_POST['smtp_from_name'],
+
+        // API settings
+        'api_settings' => $apiSettings,
     ];
 
     // Update settings

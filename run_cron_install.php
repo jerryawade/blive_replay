@@ -10,7 +10,8 @@ $script = basename($_POST['script']); // Sanitize to prevent directory traversal
 $allowedScripts = [
     'install_log_archiver_cron.sh',
     'install_scheduler_service_cron.sh',
-    'install_stream_monitor_service_cron.sh'
+    'install_stream_monitor_service_cron.sh',
+    'install_cleanup_messages_cron.sh'
 ];
 
 if (!in_array($script, $allowedScripts)) {

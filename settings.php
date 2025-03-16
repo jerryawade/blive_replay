@@ -30,7 +30,16 @@ class SettingsManager
         'smtp_username' => '',
         'smtp_password' => '',
         'smtp_from_email' => '',
-        'smtp_from_name' => 'RePlay System'
+        'smtp_from_name' => 'RePlay System',
+
+        // API settings
+        'api_settings' => [
+            'api_enabled' => true,
+            'api_key' => 'generated32characterrandomstringhere',
+            'api_port' => 80,
+            'api_allowed_ips' => [],
+            'enable_control' => false,
+        ],
     ];
 
     public function __construct()
@@ -108,7 +117,7 @@ function renderSettingsModal($settings)
                                 <button class="nav-link active" id="server-tab" data-bs-toggle="tab"
                                         data-bs-target="#server-config" type="button" role="tab"
                                         aria-controls="server-config" aria-selected="true">
-                                    <i class="bi bi-server me-1"></i> Server Configuration
+                                    <i class="bi bi-server me-1"></i> Server
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
@@ -137,6 +146,13 @@ function renderSettingsModal($settings)
                                         data-bs-target="#cron-config" type="button" role="tab"
                                         aria-controls="cron-config" aria-selected="false">
                                     <i class="bi bi-clock-history me-1"></i> Cron
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="api-tab" data-bs-toggle="tab"
+                                        data-bs-target="#api-config" type="button" role="tab"
+                                        aria-controls="api-config" aria-selected="false">
+                                    <i class="bi bi-code-slash me-1"></i> API
                                 </button>
                             </li>
                         </ul>
@@ -700,6 +716,7 @@ function renderSettingsModal($settings)
                                         $logArchiverCron = shell_exec('sudo crontab -l 2>/dev/null | grep "activity_log_archiver.php"');
                                         $schedulerCron = shell_exec('sudo crontab -l 2>/dev/null | grep "scheduler_service.php"');
                                         $streamMonitorCron = shell_exec('sudo crontab -l 2>/dev/null | grep "stream_monitor_service.php"');
+                                        $cleanupMessagesCron = shell_exec('sudo crontab -l 2>/dev/null | grep "cleanup_messages.php"');
 
                                         // Log Archiver Cron
                                         $logArchiverInstalled = !empty(trim($logArchiverCron));
@@ -750,6 +767,185 @@ function renderSettingsModal($settings)
                                                 <?php echo $streamMonitorInstalled ? '<i class="bi bi-check-circle me-1"></i> Installed: ' . htmlspecialchars(trim($streamMonitorCron)) : 'Not Installed'; ?>
                                             </span>
                                         </div>
+
+                                        <?php
+                                        // Cleanup Messages Cron
+                                        $cleanupMessagesInstalled = !empty(trim($cleanupMessagesCron));
+                                        ?>
+                                        <div class="mb-3">
+                                            <button type="button"
+                                                    class="btn btn-outline-primary btn-sm icon-btn install-cron-btn"
+                                                    data-script="install_cleanup_messages_cron.sh"
+                                                <?php echo $cleanupMessagesInstalled ? 'disabled' : ''; ?>>
+                                                <i class="bi bi-gear me-2"></i>
+                                                Install Cleanup Messages Cron
+                                            </button>
+                                            <span class="cron-status ms-2 <?php echo $cleanupMessagesInstalled ? 'text-success' : 'text-muted'; ?>">
+                                                <?php echo $cleanupMessagesInstalled ? '<i class="bi bi-check-circle me-1"></i> Installed: ' . htmlspecialchars(trim($cleanupMessagesCron)) : 'Not Installed'; ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- API Tab -->
+                            <div class="tab-pane fade" id="api-config" role="tabpanel"
+                                 aria-labelledby="api-tab">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <i class="bi bi-code-slash me-2"></i>
+                                        API Configuration
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" id="api_enabled"
+                                                       name="api_settings[api_enabled]"
+                                                    <?php echo isset($settings['api_settings']['api_enabled']) && $settings['api_settings']['api_enabled'] ? 'checked' : ''; ?>>
+                                                <label class="form-check-label" for="api_enabled">
+                                                    <i class="bi bi-toggles me-2"></i>
+                                                    Enable API
+                                                </label>
+                                            </div>
+                                            <small class="text-muted">When enabled, external devices can access the
+                                                system through the API.</small>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" id="enable_control"
+                                                       name="api_settings[enable_control]"
+                                                    <?php echo isset($settings['api_settings']['enable_control']) && $settings['api_settings']['enable_control'] ? 'checked' : ''; ?>>
+                                                <label class="form-check-label" for="enable_control">
+                                                    <i class="bi bi-play-btn me-2"></i>
+                                                    Enable Recording Control via API
+                                                </label>
+                                            </div>
+                                            <small class="text-muted">When enabled, allows starting and stopping recordings through API endpoints.</small>
+                                        </div>
+                                        <div id="api_settings_container" class="border rounded p-3 mt-3"
+                                             style="display: <?php echo isset($settings['api_settings']['api_enabled']) && $settings['api_settings']['api_enabled'] ? 'block' : 'none'; ?>;">
+                                            <div class="mb-3">
+                                                <label for="api_key" class="form-label">API Key</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text">
+                                                        <i class="bi bi-key"></i>
+                                                    </span>
+                                                    <input type="text" class="form-control" id="api_key"
+                                                           name="api_settings[api_key]"
+                                                           value="<?php echo htmlspecialchars($settings['api_settings']['api_key'] ?? ''); ?>"
+                                                        <?php echo isset($settings['api_settings']['api_enabled']) && $settings['api_settings']['api_enabled'] ? 'required' : ''; ?>>
+                                                    <button class="btn btn-outline-secondary" type="button"
+                                                            id="generateApiKeyBtn">
+                                                        <i class="bi bi-magic"></i> Generate
+                                                    </button>
+                                                </div>
+                                                <small class="text-muted">Authentication key for API access. Keep this
+                                                    secret.</small>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label for="api_port" class="form-label">API Port</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text">
+                                                        <i class="bi bi-hdd-network"></i>
+                                                    </span>
+                                                    <input type="number" class="form-control" id="api_port"
+                                                           name="api_settings[api_port]"
+                                                           value="<?php echo htmlspecialchars($settings['api_settings']['api_port'] ?? '80'); ?>"
+                                                           min="1" max="65535">
+                                                </div>
+                                                <small class="text-muted">Port for API server (default: 80). Restart
+                                                    required for changes to take effect.</small>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label d-block">API Endpoints</label>
+                                                <div class="alert alert-info">
+                                                    <h6><i class="bi bi-info-circle me-2"></i>Available Endpoints</h6>
+                                                    <ul class="mb-0">
+                                                        <li><strong>Status:</strong> <code id="statusEndpointUrl">/api.php?endpoint=status&api_key=YOUR_API_KEY</code>
+                                                        </li>
+                                                        <li><strong>System Info:</strong> <code id="infoEndpointUrl">/api.php?endpoint=info&api_key=YOUR_API_KEY</code>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label for="allowed_ip_addresses" class="form-label">Allowed IP
+                                                    Addresses (Optional)</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text">
+                                                        <i class="bi bi-shield-lock"></i>
+                                                    </span>
+                                                    <input type="text" class="form-control" id="allowed_ip_addresses"
+                                                           name="api_settings[api_allowed_ips]"
+                                                           value="<?php echo htmlspecialchars(implode(', ', $settings['api_settings']['api_allowed_ips'] ?? [])); ?>"
+                                                           placeholder="e.g. 192.168.1.100, 10.0.0.5">
+                                                </div>
+                                                <small class="text-muted">Comma-separated list of IPs allowed to access
+                                                    the API. Leave empty to allow all.</small>
+                                            </div>
+
+                                            <div class="mt-3 border-top pt-3">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <div>
+                                                        <h6 class="mb-0">Test API Connection</h6>
+                                                        <p class="text-muted small mb-0">Verify your API
+                                                            configuration</p>
+                                                    </div>
+                                                    <button type="button"
+                                                            class="btn btn-outline-primary btn-sm icon-btn"
+                                                            id="testApiBtn">
+                                                        <i class="bi bi-lightning-charge"></i>
+                                                        Test API
+                                                    </button>
+                                                </div>
+
+                                                <!-- Test API notification area (hidden by default) -->
+                                                <div id="apiTestNotification" class="mt-2" style="display: none;">
+                                                    <!-- Content will be dynamically generated -->
+                                                </div>
+                                                <div class="mt-3 border-top pt-3">
+                                                    <div class="d-flex align-items-center justify-content-between">
+                                                        <div>
+                                                            <h6 class="mb-0">API Guide</h6>
+                                                            <p class="text-muted small mb-0">Learn how to use the RePlay API</p>
+                                                        </div>
+                                                        <button type="button"
+                                                                class="btn btn-outline-primary btn-sm icon-btn"
+                                                                id="apiGuideButton">
+                                                            <i class="bi bi-book"></i>
+                                                            API Guide
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- API Guide Modal -->
+                            <div class="modal fade" id="apiGuideModal" tabindex="-1" aria-labelledby="apiGuideModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="apiGuideModalLabel">
+                                                <i class="bi bi-book me-2"></i>
+                                                RePlay API Guide
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body" style="max-height: calc(100vh - 250px); overflow-y: auto;">
+                                            <div id="apiGuideContent"></div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary icon-btn" data-bs-dismiss="modal">
+                                                <i class="bi bi-x-lg"></i>
+                                                Close
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -759,7 +955,7 @@ function renderSettingsModal($settings)
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary icon-btn" data-bs-dismiss="modal">
                         <i class="bi bi-x-lg"></i>
-                        Cancel
+                        Close
                     </button>
                     <button type="button" class="btn btn-primary icon-btn" id="saveSettingsBtn">
                         <i class="bi bi-save"></i>
@@ -972,6 +1168,221 @@ function renderSettingsModal($settings)
                         });
                 });
             });
+
+            // API Guide functionality
+            const apiGuideButton = document.getElementById('apiGuideButton');
+            const apiGuideModal = document.getElementById('apiGuideModal');
+            const apiGuideContent = document.getElementById('apiGuideContent');
+
+            if (apiGuideButton && apiGuideModal && apiGuideContent) {
+                apiGuideButton.addEventListener('click', function() {
+                    // Fetch the API guide markdown
+                    fetch('api_guide.md')
+                        .then(response => response.text())
+                        .then(markdown => {
+                            // Convert markdown to HTML with DOMPurify and marked
+                            const htmlContent = DOMPurify.sanitize(marked.parse(markdown), {
+                                ALLOW_UNKNOWN_PROTOCOLS: true
+                            });
+                            apiGuideContent.innerHTML = htmlContent;
+
+                            // Add event listeners to internal links
+                            const links = apiGuideContent.querySelectorAll('a[href^="#"]');
+                            links.forEach(link => {
+                                link.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    const targetId = this.getAttribute('href').substring(1);
+                                    const targetElement = apiGuideContent.querySelector(`[id="${targetId}"]`);
+                                    if (targetElement) {
+                                        targetElement.scrollIntoView({
+                                            behavior: 'smooth',
+                                            block: 'start'
+                                        });
+                                    }
+                                });
+                            });
+
+                            // Show the modal
+                            const modal = new bootstrap.Modal(apiGuideModal);
+                            modal.show();
+                        })
+                        .catch(error => {
+                            console.error('Error loading API guide:', error);
+                            apiGuideContent.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Failed to load API guide. Please contact your system administrator.
+                    </div>
+                `;
+                            const modal = new bootstrap.Modal(apiGuideModal);
+                            modal.show();
+                        });
+                });
+            }
+
+            // Handle API settings visibility
+            const apiEnabledCheckbox = document.getElementById('api_enabled');
+            const apiSettingsContainer = document.getElementById('api_settings_container');
+            const apiKeyField = document.getElementById('api_key');
+            const enableControlCheckbox = document.getElementById('enable_control');
+
+            if (apiEnabledCheckbox && apiSettingsContainer && apiKeyField && enableControlCheckbox) {
+                // Initial states
+                apiKeyField.required = apiEnabledCheckbox.checked;
+                enableControlCheckbox.disabled = !apiEnabledCheckbox.checked; // Disable if API is not enabled
+
+                // Toggle on change
+                apiEnabledCheckbox.addEventListener('change', function () {
+                    apiSettingsContainer.style.display = this.checked ? 'block' : 'none';
+                    apiKeyField.required = this.checked;
+                    enableControlCheckbox.disabled = !this.checked; // Enable/disable control based on API status
+                    if (!this.checked) {
+                        const form = document.getElementById('settingsForm');
+                        if (form) form.checkValidity(); // Clear validation errors if API is disabled
+                    }
+                });
+
+                // Handle API key generation
+                const generateApiKeyBtn = document.getElementById('generateApiKeyBtn');
+                if (generateApiKeyBtn) {
+                    generateApiKeyBtn.addEventListener('click', function () {
+                        const apiKey = generateRandomApiKey();
+                        apiKeyField.value = apiKey;
+                        updateApiEndpointUrls(apiKey);
+                    });
+                }
+
+                // Update endpoint URLs on API key change
+                if (apiKeyField) {
+                    apiKeyField.addEventListener('input', function () {
+                        updateApiEndpointUrls(this.value);
+                    });
+                    // Initialize with current value
+                    updateApiEndpointUrls(apiKeyField.value);
+                }
+
+                // Handle API test button
+                const testApiBtn = document.getElementById('testApiBtn');
+                const apiTestNotification = document.getElementById('apiTestNotification');
+
+                if (testApiBtn && apiTestNotification) {
+                    testApiBtn.addEventListener('click', function () {
+                        // Basic validation
+                        if (!apiKeyField.value) {
+                            showApiTestResult(false, 'Please generate or enter an API key first');
+                            apiKeyField.focus();
+                            return;
+                        }
+
+                        // Show loading state
+                        testApiBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Testing...';
+                        testApiBtn.disabled = true;
+                        showApiTestResult('loading', 'Testing API cnnection...');
+
+                        // Test the API
+                        const apiKey = apiKeyField.value;
+                        const testUrl = `api.php?endpoint=status&api_key=${encodeURIComponent(apiKey)}`;
+
+                        fetch(testUrl)
+                            .then(response => {
+                                if (!response.ok) {
+                                    return response.json().then(data => {
+                                        throw new Error(data.error || `Server responded with status: ${response.status}`);
+                                    });
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+                                let message = `API connection successful! Recording status: ${data.recording_active ? 'Active' : 'Inactive'}`;
+                                if (enableControlCheckbox.checked) {
+                                    message += ' | Recording control: Enabled';
+                                } else {
+                                    message += ' | Recording control: Disabled';
+                                }
+                                showApiTestResult(true, message);
+                            })
+                            .catch(error => {
+                                showApiTestResult(false, 'API test failed: ' + error.message);
+                            })
+                            .finally(() => {
+                                // Reset button state
+                                testApiBtn.innerHTML = '<i class="bi bi-lightning-charge"></i> Test API';
+                                testApiBtn.disabled = false;
+                            });
+                    });
+                }
+            }
+
+            /**
+             * Generate a random API key
+             */
+            function generateRandomApiKey() {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                const length = 32;
+                let apiKey = '';
+
+                for (let i = 0; i < length; i++) {
+                    apiKey += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+
+                return apiKey;
+            }
+
+            /**
+             * Update API endpoint URLs in the info section
+             */
+            function updateApiEndpointUrls(apiKey) {
+                const statusEndpointUrl = document.getElementById('statusEndpointUrl');
+                const infoEndpointUrl = document.getElementById('infoEndpointUrl');
+
+                if (statusEndpointUrl) {
+                    statusEndpointUrl.textContent = `/api.php?endpoint=status&api_key=${apiKey || 'YOUR_API_KEY'}`;
+                }
+
+                if (infoEndpointUrl) {
+                    infoEndpointUrl.textContent = `/api.php?endpoint=info&api_key=${apiKey || 'YOUR_API_KEY'}`;
+                }
+            }
+
+            /**
+             * Show API test results
+             */
+            function showApiTestResult(success, message) {
+                const apiTestNotification = document.getElementById('apiTestNotification');
+                if (!apiTestNotification) return;
+
+                if (success === 'loading') {
+                    apiTestNotification.innerHTML = `
+            <div class="alert alert-info">
+                <div class="d-flex align-items-center">
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    <span>${message}</span>
+                </div>
+            </div>
+        `;
+                } else {
+                    const alertClass = success ? 'alert-success' : 'alert-danger';
+                    const icon = success ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
+
+                    apiTestNotification.innerHTML = `
+            <div class="alert ${alertClass}">
+                <div class="d-flex align-items-center">
+                    <i class="bi ${icon} me-2"></i>
+                    <span>${message}</span>
+                </div>
+            </div>
+        `;
+                }
+
+                apiTestNotification.style.display = 'block';
+
+                // Auto-hide success messages after 10 seconds
+                if (success === true) {
+                    setTimeout(() => {
+                        apiTestNotification.style.display = 'none';
+                    }, 10000);
+                }
+            }
         });
     </script>
     <?php
@@ -982,6 +1393,22 @@ function renderSettingsModal($settings)
 function handleSettingsUpdate($settingsManager)
 {
     if (isset($_POST['update_settings']) && isset($_SESSION['username'])) {
+        // Process API settings
+        $apiSettings = [
+            'api_enabled' => isset($_POST['api_settings']['api_enabled']),
+            'api_key' => $_POST['api_settings']['api_key'] ?? '',
+            'api_port' => (int)($_POST['api_settings']['api_port'] ?? 80),
+            'enable_control' => isset($_POST['api_settings']['enable_control']),
+        ];
+
+        // Handle allowed IPs - convert comma-separated string to array
+        if (isset($_POST['api_settings']['api_allowed_ips'])) {
+            $allowedIps = array_map('trim', explode(',', $_POST['api_settings']['api_allowed_ips']));
+            $apiSettings['api_allowed_ips'] = array_filter($allowedIps); // Remove empty entries
+        } else {
+            $apiSettings['api_allowed_ips'] = [];
+        }
+
         $newSettings = [
             'server_url' => rtrim($_POST['server_url'], '/'),
             'live_stream_url' => $_POST['live_stream_url'],
@@ -1005,7 +1432,10 @@ function handleSettingsUpdate($settingsManager)
             'smtp_username' => $_POST['smtp_username'] ?? '',
             'smtp_password' => $_POST['smtp_password'] ?? '',
             'smtp_from_email' => $_POST['smtp_from_email'] ?? '',
-            'smtp_from_name' => $_POST['smtp_from_name'] ?? 'RePlay System'
+            'smtp_from_name' => $_POST['smtp_from_name'] ?? 'RePlay System',
+
+            // API settings
+            'api_settings' => $apiSettings,
         ];
         $settingsManager->updateSettings($newSettings, $_SESSION['username']);
         header("Location: " . $_SERVER['PHP_SELF']);
@@ -1015,7 +1445,7 @@ function handleSettingsUpdate($settingsManager)
 
 function renderAboutModal()
 {
-    $version = "1.5.0"; // Update this version number as needed
+    $version = "1.6.0"; // Update this version number as needed
     $buildDate = "March 2025";
 
     ob_start();
