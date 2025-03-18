@@ -101,130 +101,73 @@ class FFmpegService
      * @param object $activityLogger Logger for activity tracking
      * @return array Result with success status, message, and recording details
      */
-    public function startRecording(string $srtUrl, string $username, $activityLogger): array
-    {
-        $this->log("\n=== Starting Recording Process ===");
-        $this->log("Current working directory: " . getcwd());
-        $this->log("User running PHP: " . get_current_user());
-        $this->log("PHP process ID: " . getmypid());
+    public function startRecording($srtUrl, $username, $activityLogger) {
+        $maxWaitTime = 30; // Maximum wait time in seconds
+        $frameCheckInterval = 1; // Check for frames every second
+        $requiredFrames = 5; // Minimum number of frames to confirm recording
 
-        // Log settings
-        $this->log("SRT URL: $srtUrl");
+        $outputFile = $this->recordingsDir . "/BLIVE_" . date('Ymd_His') . ".mp4";
 
-        $timestamp = date('Ymd_His');
-        $outputFile = $this->recordingsDir . "/BLIVE_{$timestamp}.mp4";
-        $this->log("Output file will be: " . $outputFile);
+        $command = "ffmpeg -i " . escapeshellarg($srtUrl) .
+            " -vsync 1 -async 1 -copyts -start_at_zero" .
+            " -c:v libx264 -preset veryfast -crf 23" .
+            " -c:a aac -b:a 128k" .
+            " -max_muxing_queue_size 1024" .
+            " -frames:v " . ($maxWaitTime * 2) . // Limit total frames to prevent infinite wait
+            " " . escapeshellarg($outputFile) .
+            " 2>&1";
 
-        // Directory checks
-        $this->log("Recordings directory exists: " . (is_dir($this->recordingsDir) ? 'yes' : 'no'));
-        $this->log("Recordings directory writable: " . (is_writable($this->recordingsDir) ? 'yes' : 'no'));
-
-        // FFmpeg version check
-        $ffmpegOutput = shell_exec('ffmpeg -version 2>&1');
-        $this->log("FFmpeg version check output: " . $ffmpegOutput);
-
-        // Test FFmpeg SRT capability
-        $testCommand = 'ffmpeg -protocols 2>&1 | grep srt';
-        $srtSupport = shell_exec($testCommand);
-        $this->log("FFmpeg SRT support check: " . ($srtSupport ? "SRT supported" : "SRT not found in protocols"));
-
-        // Command preparation
-        $command = 'ffmpeg -err_detect ignore_err -i ' . escapeshellarg($srtUrl) .
-            ' -vsync 1' .                         // Enable video sync
-            ' -async 1' .                         // Enable audio sync
-            ' -copyts' .                          // Copy timestamps
-            ' -start_at_zero' .                   // Start timestamps at zero
-            ' -c:v libx264' .                     // Video codec
-            ' -preset veryfast  ' .               // Compression preset
-            ' -crf 23' .                          // Reasonable quality
-            ' -c:a aac' .                         // Audio codec
-            ' -b:a 128k' .                        // Audio bitrate
-            ' -ac 2' .                            // 2 audio channels
-            ' -ar 44100' .                        // Audio sample rate
-            ' -max_muxing_queue_size 1024' .      // Prevent muxing errors
-            ' ' . escapeshellarg($outputFile);
-        $execCommand = $command . ' > /dev/null 2>&1 & echo $!';
-        $this->log("FFmpeg command: " . $command);
-
-        // Execute command with error capture
-        $this->log("Executing FFmpeg command...");
-        $pid = shell_exec($execCommand . ' 2>&1');
-        $this->log("FFmpeg command executed. PID: " . ($pid ? $pid : 'no pid returned'));
-        $this->log("Full command output: " . ($pid ? $pid : 'no output'));
-
-        // Test if process is running
-        if ($pid) {
-            $psCommand = "ps -p " . intval($pid) . " > /dev/null 2>&1";
-            $processCheck = shell_exec($psCommand);
-            $this->log("Process check result: " . ($processCheck !== null ? "Process running" : "Process not found"));
-        } else {
-            $this->log("=== Recording Process Failed ===\n");
-            return [
-                'success' => false,
-                'message' => 'Failed to start FFmpeg process'
-            ];
-        }
-
-        // Write control files with error checking
-        $this->log("Writing control files...");
-        try {
-            $now = time();
-            $pidWritten = file_put_contents($this->pidFile, $pid);
-            $this->log("PID file written: " . ($pidWritten !== false ? 'yes' : 'no'));
-            if ($pidWritten === false) {
-                $this->log("Failed to write PID file. Error: " . error_get_last()['message']);
-                return [
-                    'success' => false,
-                    'message' => 'Failed to write PID file'
-                ];
-            }
-
-            $outputWritten = file_put_contents($this->currentRecordingFile, $outputFile);
-            $this->log("Current recording file written: " . ($outputWritten !== false ? 'yes' : 'no'));
-            if ($outputWritten === false) {
-                $this->log("Failed to write current recording file. Error: " . error_get_last()['message']);
-                return [
-                    'success' => false,
-                    'message' => 'Failed to write recording file'
-                ];
-            }
-
-            $timeWritten = file_put_contents($this->recordingStartFile, $now);
-            $this->log("Start time file written: " . ($timeWritten !== false ? 'yes' : 'no'));
-            if ($timeWritten === false) {
-                $this->log("Failed to write start time file. Error: " . error_get_last()['message']);
-                return [
-                    'success' => false,
-                    'message' => 'Failed to write start time file'
-                ];
-            }
-
-            // Update change timestamp for all clients
-            file_put_contents($this->lastChangeFile, time());
-
-        } catch (Exception $e) {
-            $this->log("Error writing control files: " . $e->getMessage());
-            $this->log("Error trace: " . $e->getTraceAsString());
-            return [
-                'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
-            ];
-        }
-
-        // Log activity
-        if ($activityLogger) {
-            $activityLogger->logActivity($username, 'started_recording', basename($outputFile));
-        }
-
-        $this->log("=== Recording Process Complete ===\n");
-
-        return [
-            'success' => true,
-            'message' => 'Recording started successfully',
-            'start_time' => $now,
-            'filename' => basename($outputFile),
-            'full_path' => $outputFile
+        // Start recording in background
+        $descriptorspec = [
+            0 => ["pipe", "r"],  // stdin
+            1 => ["pipe", "w"],  // stdout
+            2 => ["pipe", "w"]   // stderr
         ];
+
+        $process = proc_open($command, $descriptorspec, $pipes);
+
+        if (!is_resource($process)) {
+            $this->log("Failed to start FFmpeg process");
+            return ['success' => false, 'message' => 'Could not start recording process'];
+        }
+
+        // Wait and check for frames
+        $startTime = time();
+        $framesDetected = 0;
+
+        while (time() - $startTime < $maxWaitTime) {
+            // Use ffprobe to count frames
+            $frameCountCmd = "ffprobe -v error -select_streams v:0 -count_packets " .
+                "-show_entries stream=nb_read_packets -of csv=p=0 " .
+                escapeshellarg($outputFile);
+
+            $frameCountOutput = shell_exec($frameCountCmd);
+            $frameCount = ($frameCountOutput !== null) ? trim($frameCountOutput) : "0";
+
+            if ($frameCount > $requiredFrames) {
+                // Write PID and other control files
+                file_put_contents($this->pidFile, proc_get_status($process)['pid']);
+                file_put_contents($this->currentRecordingFile, $outputFile);
+                file_put_contents($this->recordingStartFile, time());
+
+                $this->log("Recording started successfully. Frames detected: $frameCount");
+                return [
+                    'success' => true,
+                    'message' => 'Recording started',
+                    'filename' => basename($outputFile),
+                    'full_path' => $outputFile
+                ];
+            }
+
+            sleep($frameCheckInterval);
+        }
+
+        // If no frames detected, terminate process
+        proc_terminate($process);
+        proc_close($process);
+
+        $this->log("No frames detected after $maxWaitTime seconds");
+        return ['success' => false, 'message' => 'No video frames detected'];
     }
 
     /**
@@ -383,9 +326,9 @@ class FFmpegService
         $attempts = 0;
         $success = false;
 
-        while ($attempts < 6 && !$success) {
+        while ($attempts < 3 && !$success) {
             // Use multiple timestamp attempts to ensure thumbnail
-            $timestamps = ['00:00:05', '00:00:10', '00:00:01', '00:00:15', '00:00:20', '00:00:25'];
+            $timestamps = ['00:00:05', '00:00:10', '00:00:01'];
             $currentTimestamp = $timestamps[$attempts % count($timestamps)];
 
             $command = "ffmpeg -i " . escapeshellarg($videoFile) .
@@ -427,7 +370,7 @@ class FFmpegService
         $command = "ffmpeg -i " . escapeshellarg($videoFile) . " 2>&1";
         $output = shell_exec($command);
 
-        if (preg_match("/Duration: (.*?),/", $output, $matches)) {
+        if ($output !== null && preg_match("/Duration: (.*?),/", $output, $matches)) {
             return trim($matches[1]);
         }
 
@@ -564,6 +507,6 @@ class FFmpegService
         $command = 'ffmpeg -version 2>&1 | head -n 1';
         $result = shell_exec($command);
 
-        return trim($result ?? 'Unknown');
+        return ($result !== null) ? trim($result) : 'Unknown';
     }
 }

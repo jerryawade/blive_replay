@@ -6,6 +6,8 @@
 
 // Start session and include required files
 session_start();
+require_once 'settings.php';
+
 header('Content-Type: application/json');
 
 // Check if user is authenticated and is admin
@@ -15,6 +17,13 @@ if (!isset($_SESSION['authenticated']) || $_SESSION['authenticated'] !== true ||
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }
+
+// Get settings for timezone
+$settingsManager = new SettingsManager();
+$settings = $settingsManager->getSettings();
+
+// Set timezone from settings
+date_default_timezone_set($settings['timezone'] ?? 'America/Chicago');
 
 // Log files that can be cleared (NOT including user activity logs)
 $allowedLogs = [
