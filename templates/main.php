@@ -130,7 +130,13 @@ if (isAdmin()): ?>
                                             : (file_exists($thumbnailFile)
                                                 ? $thumbnailFile . '?t=' . filemtime($thumbnailFile)
                                                 : 'default-thumbnail.jpg'); ?>"
-                                             alt="<?php echo $isCurrentlyRecording ? 'Recording in Progress' : 'Thumbnail'; ?>">
+                                             alt="<?php echo $isCurrentlyRecording ? 'Recording in Progress' : 'Thumbnail'; ?>"
+                                            <?php if (!$isCurrentlyRecording && isAdmin() && !$recordingActive): ?>
+                                                class="regenerate-thumbnail"
+                                                data-file="<?php echo htmlspecialchars($file); ?>"
+                                                data-thumbnail="<?php echo htmlspecialchars($thumbnailFile); ?>"
+                                                title="Click to regenerate thumbnail"
+                                            <?php endif; ?>>
                                     </div>
                                     <div class="flex-grow-1">
                                         <h5 class="mb-1">
@@ -311,6 +317,55 @@ if (isAdmin()): ?>
             }
         } catch (error) {
             console.error('Error updating note:', error);
+        }
+    }
+
+    // Add functionality for thumbnail regeneration
+    document.addEventListener('DOMContentLoaded', function() {
+        // Attach click handler to thumbnails with regenerate-thumbnail class
+        document.querySelectorAll('.regenerate-thumbnail').forEach(function(thumbnail) {
+            thumbnail.addEventListener('click', function(e) {
+                e.preventDefault();
+                regenerateThumbnail(this.dataset.file, this.dataset.thumbnail);
+            });
+
+            // Add hover effect to indicate clickability
+            thumbnail.style.cursor = 'pointer';
+        });
+    });
+
+    // Function to regenerate a thumbnail
+    async function regenerateThumbnail(videoFile, thumbnailFile) {
+        try {
+            const thumbnailImg = document.querySelector(`img[data-file="${videoFile}"]`);
+            if (thumbnailImg) {
+                // Show loading indicator
+                const originalSrc = thumbnailImg.src;
+                thumbnailImg.src = 'assets/imgs/loading.gif'; // You may need to create this loading GIF
+
+                // Make request to regenerate thumbnail
+                const response = await fetch('regenerate_thumbnail.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `videoFile=${encodeURIComponent(videoFile)}`
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update the image with the new thumbnail (add timestamp to force reload)
+                    thumbnailImg.src = thumbnailFile + '?t=' + new Date().getTime();
+                } else {
+                    // Show error and revert to original image
+                    alert('Failed to regenerate thumbnail: ' + result.message);
+                    thumbnailImg.src = originalSrc;
+                }
+            }
+        } catch (error) {
+            console.error('Error regenerating thumbnail:', error);
+            alert('Error regenerating thumbnail. Please try again.');
         }
     }
 </script>

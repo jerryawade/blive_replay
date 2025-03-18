@@ -639,6 +639,25 @@
 
         const tabId = activeTab.id;
 
+        // Create a print-specific container
+        let printContainer = document.getElementById('print-container');
+        if (!printContainer) {
+            printContainer = document.createElement('div');
+            printContainer.id = 'print-container';
+            printContainer.style.display = 'none';
+            document.body.appendChild(printContainer);
+        }
+
+        // Clear previous print content
+        printContainer.innerHTML = `
+        <div class="print-header">
+            <h1>BLIVE RePlay - ${activeTab.textContent.trim()} Log</h1>
+            <div>
+                <strong>Generated:</strong> ${new Date().toLocaleString()}
+            </div>
+        </div>
+    `;
+
         // Show loading state on the print button
         const printButton = document.querySelector('button[onclick="printLog()"]');
         if (printButton) {
@@ -659,10 +678,39 @@
                         .then(response => response.json())
                         .then(data => {
                             fullUserLogData = data.activities;
-                            updateUserLogDisplay();
+                            if (fullUserLogData && fullUserLogData.length > 0) {
+                                printContainer.innerHTML += `
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Timestamp</th>
+                                            <th>Username</th>
+                                            <th>Action</th>
+                                            <th>Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${fullUserLogData.map(activity => `
+                                            <tr>
+                                                <td>${activity.timestamp}</td>
+                                                <td>${activity.username}</td>
+                                                <td>${activity.action}</td>
+                                                <td>${activity.filename || ''}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            `;
+                            } else {
+                                printContainer.innerHTML += '<p>No user activity log entries found.</p>';
+                            }
                             window.print();
                         })
-                        .catch(error => console.error('Error:', error));
+                        .catch(error => {
+                            console.error('Error:', error);
+                            printContainer.innerHTML += `<p>Error loading log: ${error.message}</p>`;
+                            window.print();
+                        });
                     break;
 
                 case 'ffmpegLogTab':
@@ -670,10 +718,14 @@
                         .then(response => response.text())
                         .then(data => {
                             fullFFmpegLogData = data;
-                            document.querySelector('.ffmpeg-log-pre').textContent = data;
+                            printContainer.innerHTML += `<pre>${data || 'No FFmpeg log data available.'}</pre>`;
                             window.print();
                         })
-                        .catch(error => console.error('Error:', error));
+                        .catch(error => {
+                            console.error('Error:', error);
+                            printContainer.innerHTML += `<p>Error loading log: ${error.message}</p>`;
+                            window.print();
+                        });
                     break;
 
                 case 'schedulerLogTab':
@@ -681,10 +733,14 @@
                         .then(response => response.text())
                         .then(data => {
                             fullSchedulerLogData = data;
-                            document.querySelector('.scheduler-log-pre').textContent = data;
+                            printContainer.innerHTML += `<pre>${data || 'No scheduler log data available.'}</pre>`;
                             window.print();
                         })
-                        .catch(error => console.error('Error:', error));
+                        .catch(error => {
+                            console.error('Error:', error);
+                            printContainer.innerHTML += `<p>Error loading log: ${error.message}</p>`;
+                            window.print();
+                        });
                     break;
 
                 case 'schedulerLogFileTab':
@@ -692,10 +748,14 @@
                         .then(response => response.text())
                         .then(data => {
                             fullSchedulerLogFileData = data;
-                            document.querySelector('.scheduler-log-file-pre').textContent = data;
+                            printContainer.innerHTML += `<pre>${data || 'No scheduler file log data available.'}</pre>`;
                             window.print();
                         })
-                        .catch(error => console.error('Error:', error));
+                        .catch(error => {
+                            console.error('Error:', error);
+                            printContainer.innerHTML += `<p>Error loading log: ${error.message}</p>`;
+                            window.print();
+                        });
                     break;
 
                 case 'streamLogTab':
@@ -703,10 +763,14 @@
                         .then(response => response.text())
                         .then(data => {
                             fullStreamLogData = data;
-                            document.querySelector('.stream-log-pre').textContent = data;
+                            printContainer.innerHTML += `<pre>${data || 'No stream log data available.'}</pre>`;
                             window.print();
                         })
-                        .catch(error => console.error('Error:', error));
+                        .catch(error => {
+                            console.error('Error:', error);
+                            printContainer.innerHTML += `<p>Error loading log: ${error.message}</p>`;
+                            window.print();
+                        });
                     break;
 
                 case 'emailLogTab':
@@ -714,10 +778,14 @@
                         .then(response => response.text())
                         .then(data => {
                             fullEmailLogData = data;
-                            document.querySelector('.email-log-pre').textContent = data;
+                            printContainer.innerHTML += `<pre>${data || 'No email log data available.'}</pre>`;
                             window.print();
                         })
-                        .catch(error => console.error('Error:', error));
+                        .catch(error => {
+                            console.error('Error:', error);
+                            printContainer.innerHTML += `<p>Error loading log: ${error.message}</p>`;
+                            window.print();
+                        });
                     break;
 
                 case 'debugLogTab':
@@ -725,16 +793,88 @@
                         .then(response => response.text())
                         .then(data => {
                             fullDebugLogData = data;
-                            document.querySelector('.debug-log-pre').textContent = data;
+                            printContainer.innerHTML += `<pre>${data || 'No debug log data available.'}</pre>`;
                             window.print();
                         })
-                        .catch(error => console.error('Error:', error));
+                        .catch(error => {
+                            console.error('Error:', error);
+                            printContainer.innerHTML += `<p>Error loading log: ${error.message}</p>`;
+                            window.print();
+                        });
                     break;
             }
         } catch (error) {
             console.error('Error preparing log for print:', error);
+            printContainer.innerHTML += `<p>Error preparing log: ${error.message}</p>`;
+            window.print();
         }
     }
+
+    // Add print-specific styles
+    const printStyle = document.createElement('style');
+    printStyle.innerHTML = `
+@media print {
+        body * {
+            visibility: hidden !important;
+        }
+        #print-container, #print-container * {
+            visibility: visible !important;
+            display: block !important;
+            position: static !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        @page {
+            size: letter;
+            margin: 1cm;
+        }
+        #print-container {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            font-size: 12pt !important;
+        }
+        .print-header {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            margin-bottom: 20px !important;
+            border-bottom: 2px solid #3ea9de !important;
+            padding-bottom: 10px !important;
+        }
+        .print-header h1 {
+            margin: 0 !important;
+            color: #3ea9de !important;
+            font-size: 16pt !important;
+        }
+        .print-header div {
+            text-align: right !important;
+            font-size: 10pt !important;
+        }
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin-bottom: 20px !important;
+            font-size: 10pt !important;
+        }
+        table, th, td {
+            border: 1px solid #000 !important;
+            padding: 5px !important;
+        }
+        pre {
+            white-space: pre-wrap !important;
+            word-break: break-all !important;
+            border: 1px solid #ddd !important;
+            padding: 10px !important;
+            background-color: #f4f4f4 !important;
+            font-size: 10pt !important;
+            max-width: 100% !important;
+            overflow-wrap: break-word !important;
+        }
+    }
+`;
+    document.head.appendChild(printStyle);
 
     // Initialize tab events once DOM is loaded
     document.addEventListener('DOMContentLoaded', function () {

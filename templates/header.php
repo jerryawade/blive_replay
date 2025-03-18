@@ -22,6 +22,7 @@
     <?php if (isAuthenticated()): ?>
         <script src="assets/js/recordings_update.js"></script>
         <script src="assets/js/message-system.js"></script>
+        <script src="assets/js/thumbnail-selector.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.10/purify.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <?php endif; ?>
