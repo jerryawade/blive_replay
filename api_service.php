@@ -104,6 +104,14 @@ switch ($endpoint) {
         registerDevice();
         break;
 
+    case 'thumbnails':
+        getThumbnails();
+        break;
+
+    case 'generate_thumbnail':
+        generateThumbnail();
+        break;
+
     default:
         sendResponse(['error' => 'Unknown endpoint'], 404);
         break;
@@ -715,80 +723,240 @@ function registerDevice() {
 }
 
 /**
- * Helper function to calculate next run time for a schedule
+ * Get thumbnails for a specific recording
  */
-function calculateNextRun($schedule, DateTime $now) {
-    // This is a simplified version - implement the full logic similar to scheduler_service.php
-    switch ($schedule['type']) {
-        case 'once':
-            if (!isset($schedule['date']) || !isset($schedule['startTime'])) return null;
-            $scheduleDateTime = new DateTime("{$schedule['date']} {$schedule['startTime']}");
-            return ($scheduleDateTime > $now) ? $scheduleDateTime->getTimestamp() : null;
+function getThumbnails() {
+    global $settings;
 
-        case 'daily':
-            $todayStart = new DateTime("today {$schedule['startTime']}");
-            return $todayStart > $now ? $todayStart->getTimestamp() : (new DateTime("tomorrow {$schedule['startTime']}"))->getTimestamp();
-
-        case 'weekly':
-            $currentDay = (int)$now->format('w'); // 0 (Sunday) to 6 (Saturday)
-            $daysAhead = null;
-
-            // Find the next occurrence of one of the weekdays
-            for ($i = 0; $i < 7; $i++) {
-                $checkDay = ($currentDay + $i) % 7;
-                if (in_array($checkDay, $schedule['weekdays'] ?? [])) {
-                    if ($i === 0) {
-                        // Today is a scheduled day, check if time has passed
-                        $todayStart = new DateTime("today {$schedule['startTime']}");
-                        if ($todayStart > $now) {
-                            $daysAhead = 0;
-                            break;
-                        }
-                    } else {
-                        $daysAhead = $i;
-                        break;
-                    }
-                }
-            }
-
-            if ($daysAhead !== null) {
-                $nextDate = clone $now;
-                $nextDate->modify("+{$daysAhead} day");
-                $nextDate->setTime(
-                    (int)substr($schedule['startTime'], 0, 2),
-                    (int)substr($schedule['startTime'], 3, 2)
-                );
-                return $nextDate->getTimestamp();
-            }
-            return null;
-
-        case 'monthly':
-            $currentDay = (int)$now->format('j'); // 1 to 31
-            $currentMonth = (int)$now->format('n'); // 1 to 12
-            $currentYear = (int)$now->format('Y');
-
-            // Check if any scheduled days remain in current month
-            foreach ($schedule['monthdays'] ?? [] as $day) {
-                if ($day > $currentDay || ($day == $currentDay && $schedule['startTime'] > $now->format('H:i'))) {
-                    $nextDate = new DateTime("{$currentYear}-{$currentMonth}-{$day} {$schedule['startTime']}");
-                    return $nextDate->getTimestamp();
-                }
-            }
-
-            // If no days remain in current month, find first day in next month
-            if (!empty($schedule['monthdays'])) {
-                sort($schedule['monthdays']);
-                $nextMonth = $currentMonth == 12 ? 1 : $currentMonth + 1;
-                $nextYear = $currentMonth == 12 ? $currentYear + 1 : $currentYear;
-                $nextDate = new DateTime("{$nextYear}-{$nextMonth}-{$schedule['monthdays'][0]} {$schedule['startTime']}");
-                return $nextDate->getTimestamp();
-            }
-
-            return null;
-
-        default:
-            return null;
+    // Check if video file is provided
+    $videoFile = $_GET['file'] ?? '';
+    if (empty($videoFile)) {
+        sendResponse(['error' => 'Video file parameter is required'], 400);
+        exit;
     }
+
+    // Security check: Make sure the video file path is within recordings directory
+    $recordingsDir = 'recordings';
+    $thumbnailsDir = 'thumbnails';
+    $fullPath = realpath($recordingsDir . '/' . basename($videoFile));
+
+    if (!$fullPath || strpos($fullPath, realpath($recordingsDir)) !== 0) {
+        sendResponse(['error' => 'Invalid video file path'], 400);
+        exit;
+    }
+
+    // Check if file exists
+    if (!file_exists($fullPath)) {
+        sendResponse(['error' => 'Video file not found'], 404);
+        exit;
+    }
+
+    // Get main thumbnail
+    $fileBaseName = pathinfo($videoFile, PATHINFO_FILENAME);
+    $mainThumbnail = $thumbnailsDir . '/' . $fileBaseName . '.jpg';
+
+    // Get or generate temporary thumbnails
+    $tempThumbnailsDir = $thumbnailsDir . '/temp';
+    if (!is_dir($tempThumbnailsDir)) {
+        mkdir($tempThumbnailsDir, 0777, true);
+    }
+
+    // Include FFmpegService
+    require_once 'FFmpegService.php';
+    $ffmpegService = new FFmpegService($recordingsDir, $thumbnailsDir);
+
+    // Get video duration
+    $durationStr = $ffmpegService->getVideoDuration($fullPath);
+    $durationParts = array_map('floatval', explode(':', $durationStr));
+    $durationSeconds = 0;
+    if (count($durationParts) === 3) {
+        $durationSeconds = $durationParts[0] * 3600 + $durationParts[1] * 60 + $durationParts[2];
+    }
+
+    if ($durationSeconds <= 0) {
+        $durationSeconds = 300; // Default to 5 minutes if duration can't be determined
+    }
+
+    // Generate or get thumbnails
+    $thumbnails = [];
+
+    // Add current thumbnail
+    if (file_exists($mainThumbnail)) {
+        $thumbnails[] = [
+            'id' => 'current',
+            'url' => $mainThumbnail . '?t=' . filemtime($mainThumbnail),
+            'type' => 'current'
+        ];
+    }
+
+    // Generate thumbnails at various points
+    $percentages = [5, 25, 50, 75, 95];
+    foreach ($percentages as $percentage) {
+        $timestamp = floor($durationSeconds * ($percentage / 100));
+        $tempThumbnailFile = $tempThumbnailsDir . '/' . $fileBaseName . '_' . $percentage . '.jpg';
+
+        // Check if thumbnail already exists
+        if (!file_exists($tempThumbnailFile)) {
+            // Format timestamp for FFmpeg
+            $hours = floor($timestamp / 3600);
+            $minutes = floor(($timestamp % 3600) / 60);
+            $seconds = $timestamp % 60;
+            $formattedTimestamp = sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+
+            // Generate thumbnail
+            $command = "ffmpeg -i " . escapeshellarg($fullPath) .
+                " -ss " . escapeshellarg($formattedTimestamp) .
+                " -vframes 1 -q:v 2 " .
+                escapeshellarg($tempThumbnailFile) .
+                " > /dev/null 2>&1";
+
+            shell_exec($command);
+
+            // Set proper permissions
+            if (file_exists($tempThumbnailFile)) {
+                chmod($tempThumbnailFile, 0644);
+            }
+        }
+
+        // Add to response if generated successfully
+        if (file_exists($tempThumbnailFile) && filesize($tempThumbnailFile) > 0) {
+            $thumbnails[] = [
+                'id' => 'position_' . $percentage,
+                'url' => $tempThumbnailFile . '?t=' . filemtime($tempThumbnailFile),
+                'position' => $percentage . '%',
+                'type' => 'position'
+            ];
+        }
+    }
+
+    sendResponse([
+        'success' => true,
+        'video_file' => $videoFile,
+        'duration' => $durationStr,
+        'thumbnails' => $thumbnails,
+        'timestamp' => time()
+    ]);
+}
+
+/**
+ * Apply a selected thumbnail to a recording
+ */
+function generateThumbnail() {
+    global $settings;
+
+    // Only accept POST for this endpoint
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendResponse(['error' => 'This endpoint requires POST method'], 405);
+        exit;
+    }
+
+    // Check for required parameters
+    $videoFile = $_POST['file'] ?? '';
+    $position = $_POST['position'] ?? '';
+
+    if (empty($videoFile)) {
+        sendResponse(['error' => 'Video file parameter is required'], 400);
+        exit;
+    }
+
+    // Security check: Make sure the video file path is within recordings directory
+    $recordingsDir = 'recordings';
+    $thumbnailsDir = 'thumbnails';
+    $fullPath = realpath($recordingsDir . '/' . basename($videoFile));
+
+    if (!$fullPath || strpos($fullPath, realpath($recordingsDir)) !== 0) {
+        sendResponse(['error' => 'Invalid video file path'], 400);
+        exit;
+    }
+
+    // Check if file exists
+    if (!file_exists($fullPath)) {
+        sendResponse(['error' => 'Video file not found'], 404);
+        exit;
+    }
+
+    // Include FFmpegService
+    require_once 'FFmpegService.php';
+    require_once 'logging.php';
+    $ffmpegService = new FFmpegService($recordingsDir, $thumbnailsDir);
+
+    // Get target thumbnail path
+    $fileBaseName = pathinfo($videoFile, PATHINFO_FILENAME);
+    $thumbnailFile = $thumbnailsDir . '/' . $fileBaseName . '.jpg';
+
+    // If position provided, handle thumbnail from specified position
+    if (!empty($position)) {
+        // Get video duration
+        $durationStr = $ffmpegService->getVideoDuration($fullPath);
+        $durationParts = array_map('floatval', explode(':', $durationStr));
+        $durationSeconds = 0;
+        if (count($durationParts) === 3) {
+            $durationSeconds = $durationParts[0] * 3600 + $durationParts[1] * 60 + $durationParts[2];
+        }
+
+        if ($durationSeconds <= 0) {
+            $durationSeconds = 300; // Default to 5 minutes if duration can't be determined
+        }
+
+        // Convert percentage to seconds
+        $position = str_replace('%', '', $position);
+        $position = min(max((float)$position, 0), 100);
+        $timestamp = floor($durationSeconds * ($position / 100));
+
+        // Format timestamp for FFmpeg
+        $hours = floor($timestamp / 3600);
+        $minutes = floor(($timestamp % 3600) / 60);
+        $seconds = $timestamp % 60;
+        $formattedTimestamp = sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+
+        // Generate thumbnail at specific position
+        $command = "ffmpeg -i " . escapeshellarg($fullPath) .
+            " -ss " . escapeshellarg($formattedTimestamp) .
+            " -vframes 1 -q:v 2 " .
+            escapeshellarg($thumbnailFile) .
+            " > /dev/null 2>&1";
+
+        shell_exec($command);
+    }
+
+    // Verify thumbnail was generated
+    if (file_exists($thumbnailFile) && filesize($thumbnailFile) > 0) {
+        // Set proper permissions
+        chmod($thumbnailFile, 0644);
+
+        // Log the thumbnail generation
+        $activityLogger = new ActivityLogger();
+        $activityLogger->logActivity('system', 'generated_thumbnail', basename($videoFile));
+
+        // Update change timestamp
+        $ffmpegService->updateChangeTimestamp();
+
+        sendResponse([
+            'success' => true,
+            'message' => 'Thumbnail generated successfully',
+            'thumbnail' => $thumbnailFile . '?t=' . time(),
+            'timestamp' => time()
+        ]);
+    } else {
+        sendResponse([
+            'success' => false,
+            'message' => 'Failed to generate thumbnail',
+            'timestamp' => time()
+        ], 500);
+    }
+}
+
+/**
+ * Send JSON response to the API
+ *
+ * @param array $data Response data
+ * @param int $statusCode HTTP status code
+ */
+function sendResponse($data, $statusCode = 200) {
+    header('Content-Type: application/json');
+    http_response_code($statusCode);
+    echo json_encode($data);
+    exit;
 }
 
 /**
@@ -830,14 +998,74 @@ function formatDuration($seconds) {
 }
 
 /**
- * Send JSON response
- *
- * @param array $data Response data
- * @param int $statusCode HTTP status code
+ * Calculate next run time for a schedule
  */
-function sendResponse($data, $statusCode = 200) {
-    http_response_code($statusCode);
-    header('Content-Type: application/json');
-    echo json_encode($data);
-    exit;
+function calculateNextRun($schedule, DateTime $now) {
+    switch ($schedule['type']) {
+        case 'once':
+            if (!isset($schedule['date']) || !isset($schedule['startTime'])) return null;
+            $scheduleDateTime = new DateTime("{$schedule['date']} {$schedule['startTime']}");
+            return ($scheduleDateTime > $now) ? $scheduleDateTime->getTimestamp() : null;
+
+        case 'daily':
+            $todayStart = new DateTime("today {$schedule['startTime']}");
+            return $todayStart > $now ? $todayStart->getTimestamp() : (new DateTime("tomorrow {$schedule['startTime']}"))->getTimestamp();
+
+        case 'weekly':
+            $currentDay = (int)$now->format('w');
+            $daysAhead = null;
+
+            for ($i = 0; $i < 7; $i++) {
+                $checkDay = ($currentDay + $i) % 7;
+                if (in_array($checkDay, $schedule['weekdays'] ?? [])) {
+                    if ($i === 0) {
+                        $todayStart = new DateTime("today {$schedule['startTime']}");
+                        if ($todayStart > $now) {
+                            $daysAhead = 0;
+                            break;
+                        }
+                    } else {
+                        $daysAhead = $i;
+                        break;
+                    }
+                }
+            }
+
+            if ($daysAhead !== null) {
+                $nextDate = clone $now;
+                $nextDate->modify("+{$daysAhead} day");
+                $nextDate->setTime(
+                    (int)substr($schedule['startTime'], 0, 2),
+                    (int)substr($schedule['startTime'], 3, 2)
+                );
+                return $nextDate->getTimestamp();
+            }
+            return null;
+
+        case 'monthly':
+            $currentDay = (int)$now->format('j');
+            $currentMonth = (int)$now->format('n');
+            $currentYear = (int)$now->format('Y');
+
+            foreach ($schedule['monthdays'] ?? [] as $day) {
+                if ($day > $currentDay || ($day == $currentDay && $schedule['startTime'] > $now->format('H:i'))) {
+                    $nextDate = new DateTime("{$currentYear}-{$currentMonth}-{$day} {$schedule['startTime']}");
+                    return $nextDate->getTimestamp();
+                }
+            }
+
+            // If no days remain in current month, find first day in next month
+            if (!empty($schedule['monthdays'])) {
+                sort($schedule['monthdays']);
+                $nextMonth = $currentMonth == 12 ? 1 : $currentMonth + 1;
+                $nextYear = $currentMonth == 12 ? $currentYear + 1 : $currentYear;
+                $nextDate = new DateTime("{$nextYear}-{$nextMonth}-{$schedule['monthdays'][0]} {$schedule['startTime']}");
+                return $nextDate->getTimestamp();
+            }
+
+            return null;
+
+        default:
+            return null;
+    }
 }
