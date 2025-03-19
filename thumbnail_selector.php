@@ -182,7 +182,10 @@ try {
         if ($success) {
             // Log activity
             $activityLogger->logActivity($_SESSION['username'], 'selected_thumbnail', basename($videoFile));
-            
+
+            // Update the change timestamp to notify all clients
+            $ffmpegService->updateChangeTimestamp();
+
             echo json_encode([
                 'success' => true,
                 'message' => 'Thumbnail selected successfully',

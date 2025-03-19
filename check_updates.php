@@ -15,14 +15,23 @@ function getContentHash() {
 
     // Get recordings list with timestamps
     $recordingsDir = 'recordings';
+    $thumbnailsDir = 'thumbnails';
     $recordings = glob($recordingsDir . '/*.mp4');
-    
+
     // Sort recordings to ensure consistent order
     sort($recordings);
 
     foreach ($recordings as $file) {
         $baseFile = basename($file);
+        $thumbnailFile = $thumbnailsDir . '/' . pathinfo($baseFile, PATHINFO_FILENAME) . '.jpg';
+
+        // Include recording file modification time
         $hash .= $baseFile . ':' . filemtime($file) . ';';
+
+        // Include thumbnail modification time if it exists
+        if (file_exists($thumbnailFile)) {
+            $hash .= 'thumb:' . basename($thumbnailFile) . ':' . filemtime($thumbnailFile) . ';';
+        }
     }
 
     // Add recording status
