@@ -13,6 +13,7 @@ Version 1.6.0 | Last Updated: March 2025
   - [User Management](#user-management)
   - [System Logs](#system-logs)
   - [Messaging System](#messaging-system)
+  - [Thumbnail Management](#thumbnail-management)
 - [Viewer Guide](#viewer-guide)
   - [Logging In](#viewer-logging-in)
   - [Landing Page](#landing-page)
@@ -28,7 +29,7 @@ Version 1.6.0 | Last Updated: March 2025
 
 ## Introduction
 
-BLIVE RePlay is a comprehensive video recording and streaming system designed for Bethany Church. It facilitates live streaming, video recording management, intelligent scheduling, and now includes a robust messaging system to enhance communication between administrators and users.
+BLIVE RePlay is a comprehensive video recording and streaming system designed for Bethany Church. It facilitates live streaming, video recording management, intelligent scheduling, and now includes thumbnail generation and management features.
 
 ## Admin Guide
 
@@ -181,6 +182,21 @@ Click the "Log" button in the top navigation menu.
 - Email: Email notification logs
 - Debug: System-level debug information
 
+### Thumbnail Management
+
+#### Generating Thumbnails
+1. Navigate to the recording you want to generate a thumbnail for.
+2. Click the "Generate Thumbnail" button next to the recording.
+3. The system will process the request and display the thumbnail once generated.
+
+#### Viewing Thumbnails
+- Thumbnails will be displayed in the recordings list next to each recording.
+- Click on the thumbnail to view a larger version.
+
+#### Using Thumbnails
+- Thumbnails can be used to quickly identify recordings.
+- Thumbnails are also used in the viewer's recordings list for easier navigation.
+
 ## Viewer Guide
 
 ### Viewer Logging In
@@ -200,6 +216,7 @@ Depending on admin settings, you'll see:
 3. View admin notes for additional context
 
 ### Playing Videos
+
 #### Using VLC (if enabled by admin)
 1. Click "Play Video" on the desired recording
 2. Video opens in VLC media player

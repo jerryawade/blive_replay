@@ -9,13 +9,14 @@
   - Recording Management
   - Data Retrieval
   - Logs and Monitoring
+  - Thumbnail Management
 - Error Handling
 - Client Libraries
 - Security Best Practices
 
 ## Introduction
 
-The BLIVER RePlay API provides comprehensive programmatic access to the recording and streaming system. This guide offers detailed documentation, example requests, and code samples to help you integrate with the API.
+The BLIVER RePlay API provides comprehensive programmatic access to the recording and streaming system. This guide offers detailed documentation, example requests, and code samples to help you integrate and utilize the API effectively.
 
 ## Authentication
 
@@ -28,14 +29,14 @@ The BLIVER RePlay API provides comprehensive programmatic access to the recordin
 
 ### Authentication Methods
 1. **Query Parameter**
-   ```
-   /api.php?endpoint=status&api_key=YOUR_API_KEY
-   ```
+    ```
+    /api.php?endpoint=status&api_key=YOUR_API_KEY
+    ```
 
 2. **Header Authentication (Recommended)**
-   ```http
-   X-API-Key: YOUR_API_KEY
-   ```
+    ```http
+    X-API-Key: YOUR_API_KEY
+    ```
 
 ## Endpoints
 
@@ -254,6 +255,84 @@ GET /api.php?endpoint=logs&api_key=YOUR_API_KEY&type=ffmpeg&limit=50
 #### User Activity
 ```
 GET /api.php?endpoint=activity&api_key=YOUR_API_KEY&range=week
+```
+
+### 6. Thumbnail Management
+
+#### Generate Thumbnail
+```
+POST /api.php?endpoint=generate_thumbnail&api_key=YOUR_API_KEY
+```
+
+#### Example Request
+```json
+{
+  "timestamp": 1709833200,
+  "filename": "BLIVE_20240306_123000.mp4"
+}
+```
+
+#### Example Response
+```json
+{
+  "success": true,
+  "thumbnail_url": "https://yourdomain.com/thumbnails/BLIVE_20240306_123000_1709833200.jpg"
+}
+```
+
+#### Python Example
+```python
+import requests
+
+def generate_thumbnail(api_key, timestamp, filename):
+    url = "https://yourdomain.com/api.php"
+    data = {
+        "endpoint": "generate_thumbnail",
+        "api_key": api_key,
+        "timestamp": timestamp,
+        "filename": filename
+    }
+    
+    try:
+        response = requests.post(url, json=data)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"Error generating thumbnail: {e}")
+        return None
+
+# Usage
+thumbnail = generate_thumbnail("your_api_key", 1709833200, "BLIVE_20240306_123000.mp4")
+if thumbnail:
+    print(f"Thumbnail URL: {thumbnail['thumbnail_url']}")
+```
+
+#### Node.js Example
+```javascript
+const axios = require('axios');
+
+async function generateThumbnail(apiKey, timestamp, filename) {
+    try {
+        const response = await axios.post('https://yourdomain.com/api.php', {
+            endpoint: 'generate_thumbnail',
+            api_key: apiKey,
+            timestamp: timestamp,
+            filename: filename
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error generating thumbnail:', error.message);
+        return null;
+    }
+}
+
+// Usage
+generateThumbnail('your_api_key', 1709833200, 'BLIVE_20240306_123000.mp4')
+    .then(thumbnail => {
+        if (thumbnail) {
+            console.log(`Thumbnail URL: ${thumbnail.thumbnail_url}`);
+        }
+    });
 ```
 
 ## Error Handling
