@@ -11,15 +11,6 @@
             </div>
             <div class="modal-body">
                 <div class="traffic-monitor-container">
-                    <!-- Network Interface Selector -->
-                    <div class="row mb-3">
-                        <div class="col-md-6 offset-md-3">
-                            <select id="networkInterfaceSelector" class="form-select">
-                                <option value="">Select Network Interface</option>
-                            </select>
-                        </div>
-                    </div>
-
                     <div id="processes" class="row mb-4">
                         <div class="col-md-4">
                             <div class="chart-container">
@@ -45,7 +36,7 @@
                     <div id="gpu-container" class="mb-4">
                         <h6 class="border-bottom pb-2 mb-3">
                             <i class="bi bi-gpu-card me-2"></i>
-                            GPU Statistics
+                            GPU Statistics <span id="gpu-name-display" class="badge bg-secondary ms-2">N/A</span>
                         </h6>
                         <div id="gpu-stats" class="row">
                             <div class="col-md-4">
@@ -94,6 +85,15 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Network Interface Selector -->
+                    <div class="row mb-3">
+                        <div class="col-md-6 offset-md-3">
+                            <select id="networkInterfaceSelector" class="form-select">
+                                <option value="">Select Network Interface</option>
+                            </select>
                         </div>
                     </div>
 
@@ -391,6 +391,19 @@
             
             // Update GPU statistics
             function updateGPUStats(gpuData) {
+                // Update GPU name and type badge
+                var gpuName = gpuData.name || 'Unknown GPU';
+                var gpuType = gpuData.type || 'unknown';
+                var badgeClass = 'bg-secondary';
+                
+                if (gpuType === 'nvidia') {
+                    badgeClass = 'bg-success';
+                } else if (gpuType === 'amd' || gpuType === 'amd-legacy') {
+                    badgeClass = 'bg-danger';
+                }
+                
+                $('#gpu-name-display').text(gpuName).removeClass().addClass('badge ms-2 ' + badgeClass);
+                
                 // Update GPU utilization
                 var utilization = gpuData.utilization || 0;
                 $('.gpu-utilization-chart').empty().append(
@@ -401,7 +414,7 @@
                 if (gpuData.memory) {
                     var usedMem = gpuData.memory.used || 0;
                     var totalMem = gpuData.memory.total || 1;
-                    var usedPercent = Math.round((usedMem / totalMem) * 100);
+                    var usedPercent = totalMem > 0 ? Math.round((usedMem / totalMem) * 100) : 0;
                     
                     $('.gpu-memory-chart').empty().append(
                         $('<div>').addClass('metrics-value').html('<strong>' + usedPercent + '%</strong>'),
@@ -423,11 +436,13 @@
                 
                 if (gpuData.processes && gpuData.processes.length > 0) {
                     gpuData.processes.forEach(function(process) {
+                        var memoryText = process.memory === 'N/A' ? 'N/A' : process.memory + ' MB';
+                        
                         $tbody.append(
                             $('<tr>').append(
                                 $('<td>').text(process.pid),
                                 $('<td>').text(process.name),
-                                $('<td>').text(process.memory + ' MB')
+                                $('<td>').text(memoryText)
                             )
                         );
                     });

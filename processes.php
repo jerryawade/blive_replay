@@ -99,20 +99,42 @@ function getMemoryUsage() {
     }
 }
 
-// GPU usage with nvidia-smi
+// GPU usage with support for both NVIDIA and AMD
 function getGpuUsage() {
     try {
-        // Check if nvidia-smi is available
-        $nvidiaSmiExists = @shell_exec('which nvidia-smi');
-        if (empty($nvidiaSmiExists)) {
-            return ['error' => 'nvidia-smi not found'];
+        // Check available GPU tools
+        $nvidiaSmiExists = trim(@shell_exec('which nvidia-smi 2>/dev/null'));
+        $rocmSmiExists = trim(@shell_exec('which rocm-smi 2>/dev/null'));
+        $amdgpuProTopExists = trim(@shell_exec('which amdgpu-pro-top 2>/dev/null'));
+        
+        // First try NVIDIA
+        if (!empty($nvidiaSmiExists)) {
+            return getNvidiaGpuStats();
         }
+        // Then try AMD with ROCm
+        else if (!empty($rocmSmiExists)) {
+            return getAmdRocmGpuStats();
+        }
+        // Then try AMD with amdgpu-pro-top
+        else if (!empty($amdgpuProTopExists)) {
+            return getAmdLegacyGpuStats();
+        }
+        
+        return ['error' => 'No supported GPU tools found (nvidia-smi, rocm-smi, or amdgpu-pro-top)'];
+    } catch (Throwable $e) {
+        return ['error' => $e->getMessage()];
+    }
+}
 
+// Get NVIDIA GPU statistics using nvidia-smi
+function getNvidiaGpuStats() {
+    try {
         // Get GPU utilization and memory stats
         $gpuUtilization = @shell_exec('nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits');
         $gpuMemoryUsed = @shell_exec('nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits');
         $gpuMemoryTotal = @shell_exec('nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits');
         $gpuTemperature = @shell_exec('nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits');
+        $gpuName = @shell_exec('nvidia-smi --query-gpu=name --format=csv,noheader,nounits');
         
         // Get running processes
         $gpuProcessesOutput = @shell_exec('nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader,nounits');
@@ -142,6 +164,8 @@ function getGpuUsage() {
         }
         
         return [
+            'type' => 'nvidia',
+            'name' => trim($gpuName),
             'utilization' => (int)trim($gpuUtilization),
             'memory' => [
                 'used' => (int)trim($gpuMemoryUsed),
@@ -151,7 +175,159 @@ function getGpuUsage() {
             'processes' => $processes
         ];
     } catch (Throwable $e) {
-        return ['error' => $e->getMessage()];
+        return ['error' => 'Error getting NVIDIA GPU stats: ' . $e->getMessage()];
+    }
+}
+
+// Get AMD GPU statistics using rocm-smi (for newer AMD GPUs with ROCm)
+function getAmdRocmGpuStats() {
+    try {
+        // Get GPU utilization using rocm-smi
+        $gpuUtilization = @shell_exec('rocm-smi --showuse --json');
+        $utilData = json_decode($gpuUtilization, true);
+        
+        // Get GPU memory using rocm-smi
+        $gpuMemory = @shell_exec('rocm-smi --showmemuse --json');
+        $memData = json_decode($gpuMemory, true);
+        
+        // Get GPU temperature using rocm-smi
+        $gpuTemp = @shell_exec('rocm-smi --showtemp --json');
+        $tempData = json_decode($gpuTemp, true);
+        
+        // Get GPU name
+        $gpuInfo = @shell_exec('rocm-smi --showproductname --json');
+        $infoData = json_decode($gpuInfo, true);
+        
+        // Get processes - this is more complex with rocm-smi
+        $processes = [];
+        $processOutput = @shell_exec('rocm-smi --showpids');
+        
+        if ($processOutput) {
+            // Extract PIDs from the output
+            if (preg_match_all('/(\d+)/', $processOutput, $matches)) {
+                $pids = array_unique($matches[1]);
+                foreach ($pids as $pid) {
+                    // Get process details
+                    $cmdline = @file_get_contents("/proc/$pid/cmdline");
+                    $processName = $cmdline ? basename(explode("\0", $cmdline)[0]) : "Unknown";
+                    
+                    $processes[] = [
+                        'pid' => $pid,
+                        'name' => $processName,
+                        'memory' => 'N/A' // ROCm doesn't easily provide per-process memory usage
+                    ];
+                }
+            }
+        }
+        
+        // Parse the data - note that this handles only the first GPU for simplicity
+        $gpuData = [];
+        
+        if (is_array($utilData) && count($utilData) > 0) {
+            $gpuIndex = array_keys($utilData)[0];
+            $gpuName = $infoData[$gpuIndex]['Card serie'] ?? 'AMD GPU';
+            
+            // Get GPU utilization
+            $gpuUtil = $utilData[$gpuIndex]['GPU use (%)'] ?? 0;
+            $gpuUtil = str_replace('%', '', $gpuUtil);
+            
+            // Get memory usage
+            $memUsed = 0;
+            $memTotal = 0;
+            if (isset($memData[$gpuIndex]['VRAM Total Memory (MB)'])) {
+                $memTotal = str_replace(' MB', '', $memData[$gpuIndex]['VRAM Total Memory (MB)']);
+                $memUsed = str_replace(' MB', '', $memData[$gpuIndex]['VRAM Total Used Memory (MB)'] ?? '0');
+            }
+            
+            // Get temperature
+            $temperature = 0;
+            if (isset($tempData[$gpuIndex]['Temperature (Sensor edge) (C)'])) {
+                $temperature = str_replace('C', '', $tempData[$gpuIndex]['Temperature (Sensor edge) (C)']);
+            }
+            
+            return [
+                'type' => 'amd',
+                'name' => $gpuName,
+                'utilization' => (int)$gpuUtil,
+                'memory' => [
+                    'used' => (int)$memUsed,
+                    'total' => (int)$memTotal
+                ],
+                'temperature' => (int)$temperature,
+                'processes' => $processes
+            ];
+        }
+        
+        return ['error' => 'Unable to parse ROCm SMI output'];
+    } catch (Throwable $e) {
+        return ['error' => 'Error getting AMD ROCm GPU stats: ' . $e->getMessage()];
+    }
+}
+
+// Get AMD GPU statistics using amdgpu-pro-top (for older AMD GPUs)
+function getAmdLegacyGpuStats() {
+    try {
+        // Run amdgpu-pro-top in batch mode (one-time output)
+        $gpuStats = @shell_exec('amdgpu-pro-top -b');
+        
+        // Default values
+        $utilization = 0;
+        $memUsed = 0;
+        $memTotal = 0;
+        $temperature = 0;
+        $gpuName = 'AMD GPU';
+        
+        // Extract utilization
+        if (preg_match('/GPU Load\s+:\s+(\d+)%/', $gpuStats, $matches)) {
+            $utilization = (int)$matches[1];
+        }
+        
+        // Extract memory
+        if (preg_match('/VRAM Usage\s+:\s+(\d+)M\s+\/\s+(\d+)M/', $gpuStats, $matches)) {
+            $memUsed = (int)$matches[1];
+            $memTotal = (int)$matches[2];
+        }
+        
+        // Extract temperature - amdgpu-pro-top might not show this directly
+        $tempOutput = @shell_exec('sensors | grep -A 5 amdgpu');
+        if (preg_match('/temp1:\s+\+(\d+\.\d+)/', $tempOutput, $matches)) {
+            $temperature = (int)$matches[1];
+        }
+        
+        // Get GPU name
+        $lspciOutput = @shell_exec('lspci | grep -i vga | grep -i amd');
+        if (preg_match('/VGA compatible controller: (.+)/', $lspciOutput, $matches)) {
+            $gpuName = trim($matches[1]);
+        }
+        
+        // Processes - this is challenging with amdgpu-pro-top
+        // We'll try to extract what we can
+        $processes = [];
+        preg_match_all('/(\d+)\s+\|\s+(\S+)/', $gpuStats, $matches, PREG_SET_ORDER);
+        
+        foreach ($matches as $match) {
+            if (count($match) >= 3 && is_numeric($match[1])) {
+                $processes[] = [
+                    'pid' => $match[1],
+                    'name' => $match[2],
+                    'memory' => 'N/A'
+                ];
+            }
+        }
+        
+        return [
+            'type' => 'amd-legacy',
+            'name' => $gpuName,
+            'utilization' => $utilization,
+            'memory' => [
+                'used' => $memUsed,
+                'total' => $memTotal
+            ],
+            'temperature' => $temperature,
+            'processes' => $processes
+        ];
+    } catch (Throwable $e) {
+        return ['error' => 'Error getting AMD Legacy GPU stats: ' . $e->getMessage()];
     }
 }
 
