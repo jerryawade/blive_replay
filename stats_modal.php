@@ -40,6 +40,62 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- GPU Stats Container -->
+                    <div id="gpu-container" class="mb-4">
+                        <h6 class="border-bottom pb-2 mb-3">
+                            <i class="bi bi-gpu-card me-2"></i>
+                            GPU Statistics
+                        </h6>
+                        <div id="gpu-stats" class="row">
+                            <div class="col-md-4">
+                                <div class="chart-container">
+                                    <span><i class="bi bi-speedometer"></i> GPU Utilization</span>
+                                    <div class="gpu-utilization-chart"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="chart-container">
+                                    <span><i class="bi bi-memory"></i> GPU Memory</span>
+                                    <div class="gpu-memory-chart"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="chart-container">
+                                    <span><i class="bi bi-thermometer-half"></i> GPU Temperature</span>
+                                    <div class="gpu-temp-chart"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- GPU Processes Table -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="bi bi-list-task me-2"></i>
+                                        GPU Processes
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-sm" id="gpu-processes-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>PID</th>
+                                                        <th>Process Name</th>
+                                                        <th>Memory Usage (MB)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- GPU processes will be populated here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div id="bandwidthChart"></div>
                 </div>
@@ -95,6 +151,19 @@
         height: 300px;
         width: 100%;
     }
+    
+    /* GPU specific styles */
+    .temp-warning {
+        color: #ff9900;
+    }
+    
+    .temp-danger {
+        color: #dc3545;
+    }
+    
+    #gpu-container {
+        display: none; /* Hidden by default, will be shown if GPU is detected */
+    }
 </style>
 
 <script>
@@ -126,6 +195,7 @@
             // Variable to hold our update timers
             var chartUpdateTimer = null;
             var processUpdateTimer = null;
+            var gpuUpdateTimer = null;
 
             // Populate the network interface dropdown
             function populateNetworkInterfaces() {
@@ -296,6 +366,15 @@
                             var processPercent = Math.min(100, Math.round((data.cpu.usage / data.cpu.cores) * 100));
                             updateProcess('.process-chart', processPercent, 'Process');
                         }
+                        
+                        // GPU Utilization (check if GPU data exists)
+                        if (data.gpu && !data.gpu.error) {
+                            $('#gpu-container').show();
+                            updateGPUStats(data.gpu);
+                        } else if (data.gpu && data.gpu.error) {
+                            // Hide GPU section if there's an error (likely no GPU available)
+                            $('#gpu-container').hide();
+                        }
                     },
                     error: function(xhr, status, error) {
                         console.error('Process fetch error:', xhr.responseText);
@@ -308,6 +387,57 @@
                         }
                     }
                 });
+            }
+            
+            // Update GPU statistics
+            function updateGPUStats(gpuData) {
+                // Update GPU utilization
+                var utilization = gpuData.utilization || 0;
+                $('.gpu-utilization-chart').empty().append(
+                    $('<div>').addClass('metrics-value').html('<strong>' + utilization + '%</strong>')
+                );
+                
+                // Update GPU memory
+                if (gpuData.memory) {
+                    var usedMem = gpuData.memory.used || 0;
+                    var totalMem = gpuData.memory.total || 1;
+                    var usedPercent = Math.round((usedMem / totalMem) * 100);
+                    
+                    $('.gpu-memory-chart').empty().append(
+                        $('<div>').addClass('metrics-value').html('<strong>' + usedPercent + '%</strong>'),
+                        $('<div>').addClass('metrics-detail').text(usedMem + ' MB / ' + totalMem + ' MB')
+                    );
+                }
+                
+                // Update GPU temperature
+                var temp = gpuData.temperature || 0;
+                var tempClass = temp >= 80 ? 'temp-danger' : (temp >= 70 ? 'temp-warning' : '');
+                
+                $('.gpu-temp-chart').empty().append(
+                    $('<div>').addClass('metrics-value ' + tempClass).html('<strong>' + temp + '°C</strong>')
+                );
+                
+                // Update GPU processes table
+                var $tbody = $('#gpu-processes-table tbody');
+                $tbody.empty();
+                
+                if (gpuData.processes && gpuData.processes.length > 0) {
+                    gpuData.processes.forEach(function(process) {
+                        $tbody.append(
+                            $('<tr>').append(
+                                $('<td>').text(process.pid),
+                                $('<td>').text(process.name),
+                                $('<td>').text(process.memory + ' MB')
+                            )
+                        );
+                    });
+                } else {
+                    $tbody.append(
+                        $('<tr>').append(
+                            $('<td>').attr('colspan', 3).addClass('text-center').text('No GPU processes running')
+                        )
+                    );
+                }
             }
 
             // Update Memory usage display
@@ -384,6 +514,11 @@
                 if (processUpdateTimer) {
                     clearTimeout(processUpdateTimer);
                     processUpdateTimer = null;
+                }
+                
+                if (gpuUpdateTimer) {
+                    clearTimeout(gpuUpdateTimer);
+                    gpuUpdateTimer = null;
                 }
             }
         }

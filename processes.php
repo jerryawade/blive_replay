@@ -99,6 +99,62 @@ function getMemoryUsage() {
     }
 }
 
+// GPU usage with nvidia-smi
+function getGpuUsage() {
+    try {
+        // Check if nvidia-smi is available
+        $nvidiaSmiExists = @shell_exec('which nvidia-smi');
+        if (empty($nvidiaSmiExists)) {
+            return ['error' => 'nvidia-smi not found'];
+        }
+
+        // Get GPU utilization and memory stats
+        $gpuUtilization = @shell_exec('nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits');
+        $gpuMemoryUsed = @shell_exec('nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits');
+        $gpuMemoryTotal = @shell_exec('nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits');
+        $gpuTemperature = @shell_exec('nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits');
+        
+        // Get running processes
+        $gpuProcessesOutput = @shell_exec('nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader,nounits');
+        $processes = [];
+        
+        if ($gpuProcessesOutput) {
+            $processLines = explode("\n", trim($gpuProcessesOutput));
+            foreach ($processLines as $line) {
+                if (empty(trim($line))) continue;
+                
+                $parts = explode(',', $line);
+                if (count($parts) >= 2) {
+                    $pid = trim($parts[0]);
+                    $usedMemory = (int)trim($parts[1]);
+                    
+                    // Get process name
+                    $cmdline = @file_get_contents("/proc/$pid/cmdline");
+                    $processName = $cmdline ? basename(explode("\0", $cmdline)[0]) : "Unknown";
+                    
+                    $processes[] = [
+                        'pid' => $pid,
+                        'name' => $processName,
+                        'memory' => $usedMemory
+                    ];
+                }
+            }
+        }
+        
+        return [
+            'utilization' => (int)trim($gpuUtilization),
+            'memory' => [
+                'used' => (int)trim($gpuMemoryUsed),
+                'total' => (int)trim($gpuMemoryTotal)
+            ],
+            'temperature' => (int)trim($gpuTemperature),
+            'processes' => $processes
+        ];
+    } catch (Throwable $e) {
+        return ['error' => $e->getMessage()];
+    }
+}
+
 // Interface list
 if (isset($_GET['interfaces'])) {
     echo json_encode(getNetworkInterfaces());
@@ -112,8 +168,15 @@ if (isset($_GET['data']) && $_GET['data'] === 'network') {
     exit;
 }
 
-// Default: CPU + Memory
+// GPU data
+if (isset($_GET['data']) && $_GET['data'] === 'gpu') {
+    echo json_encode(getGpuUsage());
+    exit;
+}
+
+// Default: CPU + Memory + GPU
 echo json_encode([
     'cpu' => getCpuUsage(),
-    'memory' => getMemoryUsage()
+    'memory' => getMemoryUsage(),
+    'gpu' => getGpuUsage()
 ]);
