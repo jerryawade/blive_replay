@@ -166,8 +166,8 @@ date_default_timezone_set($settings['timezone'] ?? 'America/Chicago');
 <div class="container mt-4 manual-container">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <a href="index.php" class="btn btn-primary icon-btn">
-                <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+            <a href="index.php" class="btn btn-secondary icon-btn">
+                <i class="bi bi-arrow-left me-2"></i>Back to RePlay
             </a>
         </div>
         <div>
