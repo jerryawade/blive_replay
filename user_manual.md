@@ -30,7 +30,7 @@ Version 1.6.0 | Last Updated: March 2025
 
 ## Introduction
 
-BLIVE RePlay is a comprehensive video recording and streaming system designed for Bethany Church. It facilitates live streaming, video recording management, intelligent scheduling, and now includes the new System Stats feature to monitor system performance.
+BLIVE RePlay is a comprehensive video recording and streaming system designed for Bethany Church. It facilitates live streaming, video recording management, intelligent scheduling, and now includes support for GPU monitoring.
 
 ## Admin Guide
 
@@ -212,6 +212,7 @@ The System Stats dashboard includes the following metrics:
 - **CPU Usage**: Displays the current CPU usage percentage.
 - **Memory Usage**: Shows the amount of RAM being used.
 - **Network Activity**: Monitors the network input and output rates.
+- **GPU Usage**: Displays GPU utilization, memory usage, temperature, and running processes.
 
 #### Selecting Network Interface
 Administrators can select the network interface to monitor network activity. To select the network interface:
@@ -295,17 +296,17 @@ For persistent issues, contact your system administrator.
 - Message Check Interval: Every 30 seconds
 
 ### Automatic Intervals
-| Feature | Interval | Description |
-|---------|----------|-------------|
-| Stream URL Check | 5 minutes (default, 1-60 min configurable) | Checks recording URL accessibility |
-| Force Stream Check Limit | 5 seconds | Minimum time between manual force checks |
-| Stream Check Timeout | 10 seconds | Maximum time waiting for stream response |
-| Log Auto-Refresh | 60 seconds | Automatically updates logs |
-| Recording Timer | 1 second | Updates elapsed recording time |
-| Session Keep-Alive | 10 minutes | Maintains login session |
-| Page Updates Check | 250 milliseconds | Checks recording state changes |
-| SSE Heartbeat | 5 seconds | Keeps server-sent event connection alive |
-| User Login Rate Limit | 5 attempts / 5 minutes | Protects against brute force attacks |
-| Session Regeneration | 1 hour | Regenerates session ID for security |
-| Scheduler Service | 1 minute | Checks for scheduled recordings |
-| Message Check | 30 seconds | Checks for new messages |
+| Feature                  | Interval                  | Description                              |
+|--------------------------|---------------------------|------------------------------------------|
+| Stream URL Check         | 5 minutes (default, 1-60 min configurable) | Checks recording URL accessibility |
+| Force Stream Check Limit | 5 seconds                 | Minimum time between manual force checks |
+| Stream Check Timeout     | 10 seconds                | Maximum time waiting for stream response |
+| Log Auto-Refresh         | 60 seconds                | Automatically updates logs               |
+| Recording Timer          | 1 second                  | Updates elapsed recording time           |
+| Session Keep-Alive       | 10 minutes                | Maintains login session                  |
+| Page Updates Check       | 250 milliseconds          | Checks recording state changes           |
+| SSE Heartbeat            | 5 seconds                 | Keeps server-sent event connection alive |
+| User Login Rate Limit    | 5 attempts / 5 minutes    | Protects against brute force attacks     |
+| Session Regeneration     | 1 hour                    | Regenerates session ID for security      |
+| Scheduler Service        | 1 minute                  | Checks for scheduled recordings          |
+| Message Check            | 30 seconds                | Checks for new messages                  |
