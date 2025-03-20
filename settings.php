@@ -953,6 +953,10 @@ function renderSettingsModal($settings)
                     </form>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-info icon-btn me-auto" id="viewStatsBtn">
+                        <i class="bi bi-graph-up"></i>
+                        System Stats
+                    </button>
                     <button type="button" class="btn btn-secondary icon-btn" data-bs-dismiss="modal">
                         <i class="bi bi-x-lg"></i>
                         Close
@@ -991,6 +995,48 @@ function renderSettingsModal($settings)
                     tab.show();
                 }
             }, 500);
+        }
+
+        // View Stats button click handler
+        const viewStatsBtn = document.getElementById('viewStatsBtn');
+        if (viewStatsBtn) {
+            viewStatsBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log("Stats button clicked");
+
+                // Get modal elements
+                const settingsModalEl = document.getElementById('settingsModal');
+                const statsModalEl = document.getElementById('statsModal');
+
+                if (!settingsModalEl || !statsModalEl) {
+                    console.error("Modal elements not found");
+                    return;
+                }
+
+                // Close settings modal using Bootstrap's API
+                if (typeof bootstrap !== 'undefined') {
+                    const settingsModal = bootstrap.Modal.getInstance(settingsModalEl);
+                    if (settingsModal) {
+                        settingsModal.hide();
+
+                        // Wait for settings modal to close
+                        setTimeout(function() {
+                            // Show stats modal using Bootstrap's API
+                            const statsModal = new bootstrap.Modal(statsModalEl);
+                            statsModal.show();
+
+                            // When stats modal is closed, reopen settings
+                            statsModalEl.addEventListener('hidden.bs.modal', function handler() {
+                                const newSettingsModal = new bootstrap.Modal(settingsModalEl);
+                                newSettingsModal.show();
+                                statsModalEl.removeEventListener('hidden.bs.modal', handler);
+                            });
+                        }, 500);
+                    }
+                } else {
+                    console.error("Bootstrap not available");
+                }
+            });
         }
 
         // Function to show about modal
