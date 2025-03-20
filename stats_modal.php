@@ -55,21 +55,61 @@
 </div>
 
 <style>
-    /* Existing styles remain the same */
+    .chart-container {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        height: 110px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .chart-container span {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: 500;
+    }
+    
+    .chart-container span + div,
+    .chart-container span + span {
+        margin-top: auto;
+    }
+    
+    .metrics-value {
+        font-size: 22px;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    
+    .metrics-detail {
+        font-size: 14px;
+        color: #666;
+    }
+    
+    .text-danger { color: #dc3545; }
+    
+    #bandwidthChart {
+        height: 300px;
+        width: 100%;
+    }
 </style>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Load required libraries if they don't exist
+        // Check if Plotly is already loaded, if not load it
         function loadScript(url, callback) {
             const script = document.createElement('script');
             script.type = 'text/javascript';
             script.src = url;
             script.onload = callback;
+            script.onerror = () => console.error('Failed to load ' + url);
             document.head.appendChild(script);
         }
 
-        // Check if Plotly is loaded
+        // Load Plotly if not present
         if (typeof Plotly === 'undefined') {
             loadScript('https://cdn.jsdelivr.net/npm/plotly.js@2.14.0/dist/plotly.min.js', initTrafficMonitor);
         } else {
@@ -77,228 +117,275 @@
         }
 
         function initTrafficMonitor() {
-            // Data for storing bandwidth information
             var bandwidthData = {
-                timestamp: [], // Array to store timestamps
-                rx: [],        // Array to store received data points
-                tx: []         // Array to store transmitted data points
+                timestamp: [],
+                rx: [],
+                tx: []
             };
+            
+            // Variable to hold our update timers
+            var chartUpdateTimer = null;
+            var processUpdateTimer = null;
 
-            // Populate network interface selector
+            // Populate the network interface dropdown
             function populateNetworkInterfaces() {
                 $.ajax({
                     url: 'processes.php?interfaces=1',
                     dataType: 'json',
                     success: function(interfaces) {
+                        console.log('Interfaces received:', interfaces);
                         var $selector = $('#networkInterfaceSelector');
                         $selector.find('option:not(:first)').remove();
-
-                        interfaces.forEach(function(iface) {
-                            $selector.append($('<option>', {
-                                value: iface,
-                                text: iface
-                            }));
-                        });
-
-                        // Restore previously selected interface
-                        var savedInterface = localStorage.getItem('selectedNetworkInterface');
-                        if (savedInterface && interfaces.includes(savedInterface)) {
-                            $selector.val(savedInterface);
+                        
+                        if (interfaces && interfaces.length) {
+                            interfaces.forEach(function(iface) {
+                                $selector.append($('<option>', { value: iface, text: iface }));
+                            });
+                            
+                            // Try to restore previously selected interface from localStorage
+                            var savedInterface = localStorage.getItem('selectedNetworkInterface');
+                            if (savedInterface && interfaces.includes(savedInterface)) {
+                                $selector.val(savedInterface);
+                            } else if (interfaces.length > 0) {
+                                // Select first interface if no saved preference
+                                $selector.val(interfaces[0]);
+                            }
+                            
+                            // Trigger change to start data collection
+                            $selector.trigger('change');
+                        } else {
+                            $selector.after('<p class="text-danger">No network interfaces found</p>');
                         }
                     },
                     error: function(xhr, status, error) {
-                        console.error('Error fetching network interfaces:', error);
+                        console.error('Interfaces error:', xhr.responseText);
+                        $('#networkInterfaceSelector').after('<p class="text-danger">Failed to load interfaces</p>');
                     }
                 });
             }
 
-            // Layout settings for the chart
+            // Plotly chart configuration
             var layout = {
-                title: {
-                    text: 'Network Bandwidth',
-                    font: {
-                        family: 'Roboto, sans-serif',
-                        size: 20
-                    }
+                title: { 
+                    text: 'Network Bandwidth', 
+                    font: { family: 'Roboto, sans-serif', size: 20 } 
                 },
-                xaxis: {
-                    title: 'Time',
-                    type: 'date',
-                    tickformat: '%I:%M:%S %p'
+                xaxis: { 
+                    title: 'Time', 
+                    type: 'date', 
+                    tickformat: '%H:%M:%S' 
                 },
-                yaxis: {
-                    title: 'Mbps',
-                    rangemode: 'tozero'
+                yaxis: { 
+                    title: 'Mbps', 
+                    rangemode: 'tozero' 
                 },
                 plot_bgcolor: 'rgba(250,250,250,0.95)',
                 paper_bgcolor: 'rgba(250,250,250,0.95)',
-                margin: {
-                    l: 50,
-                    r: 30,
-                    b: 60,
-                    t: 80,
-                    pad: 4
+                margin: { l: 50, r: 30, b: 60, t: 80, pad: 4 },
+                legend: {
+                    orientation: 'h',
+                    xanchor: 'center',
+                    x: 0.5,
+                    y: 1.1
                 }
             };
 
-            var config = {
-                responsive: true,
-                displayModeBar: false
+            var config = { 
+                responsive: true, 
+                displayModeBar: false 
             };
 
-            // Function to update the bandwidth chart with data from the server
+            // Update network bandwidth chart
             function updateChart() {
                 var selectedInterface = $('#networkInterfaceSelector').val();
-
+                if (!selectedInterface) {
+                    return;
+                }
+                
                 $.ajax({
-                    url: 'processes.php?data=network' + (selectedInterface ? '&interface=' + selectedInterface : ''),
+                    url: 'processes.php?data=network&interface=' + selectedInterface,
                     dataType: 'json',
-                    success: function (data) {
-                        // Check if data has rx and tx properties
-                        if (data && typeof data.rx !== 'undefined' && typeof data.tx !== 'undefined') {
-                            var rx = parseFloat(data.rx.toFixed(2));
-                            var tx = parseFloat(data.tx.toFixed(2));
-                            var interfaceName = data.interface || 'unknown';
+                    success: function(data) {
+                        console.log('Network data:', data);
+                        if (data.error) {
+                            $('#bandwidthChart').html(`<p class="text-danger">Error: ${data.error}</p>`);
+                            return;
+                        }
+                        
+                        var rx = parseFloat(data.rx || 0).toFixed(2);
+                        var tx = parseFloat(data.tx || 0).toFixed(2);
+                        var interfaceName = data.interface || selectedInterface;
 
-                            // Store the current timestamp and data points
-                            bandwidthData.timestamp.push(new Date());
-                            bandwidthData.rx.push(rx);
-                            bandwidthData.tx.push(tx);
+                        // Add new data points
+                        bandwidthData.timestamp.push(new Date());
+                        bandwidthData.rx.push(rx);
+                        bandwidthData.tx.push(tx);
 
-                            // Limit dataset to 60 data points
-                            if (bandwidthData.timestamp.length > 60) {
-                                bandwidthData.timestamp.shift();
-                                bandwidthData.rx.shift();
-                                bandwidthData.tx.shift();
-                            }
+                        // Keep only last 60 data points
+                        if (bandwidthData.timestamp.length > 60) {
+                            bandwidthData.timestamp.shift();
+                            bandwidthData.rx.shift();
+                            bandwidthData.tx.shift();
+                        }
 
-                            // Create traces for received and transmitted data
-                            var traceRx = {
-                                x: bandwidthData.timestamp,
-                                y: bandwidthData.rx,
-                                mode: 'lines+markers',
-                                name: 'Received',
-                                line: {color: '#3ea9de', width: 2},
-                                marker: {size: 4}
-                            };
+                        var traceRx = {
+                            x: bandwidthData.timestamp,
+                            y: bandwidthData.rx,
+                            mode: 'lines+markers',
+                            name: 'Download (Mbps)',
+                            line: { color: '#3ea9de', width: 2 },
+                            marker: { size: 4 }
+                        };
 
-                            var traceTx = {
-                                x: bandwidthData.timestamp,
-                                y: bandwidthData.tx,
-                                mode: 'lines+markers',
-                                name: 'Transmitted',
-                                line: {color: '#dc3545', width: 2},
-                                marker: {size: 4}
-                            };
+                        var traceTx = {
+                            x: bandwidthData.timestamp,
+                            y: bandwidthData.tx,
+                            mode: 'lines+markers',
+                            name: 'Upload (Mbps)',
+                            line: { color: '#dc3545', width: 2 },
+                            marker: { size: 4 }
+                        };
 
-                            // Combine traces into data array
-                            var chartData = [traceRx, traceTx];
+                        // Update chart title to show current interface
+                        layout.title.text = 'Network Bandwidth - Interface: ' + interfaceName;
+                        
+                        // Create or update the chart
+                        Plotly.newPlot('bandwidthChart', [traceRx, traceTx], layout, config);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Network fetch error:', xhr.responseText);
+                        $('#bandwidthChart').html('<p class="text-danger">Failed to fetch network data</p>');
+                    },
+                    complete: function() {
+                        // Only schedule next update if modal is still visible
+                        if ($('#statsModal').hasClass('show')) {
+                            chartUpdateTimer = setTimeout(updateChart, 1000);
+                        }
+                    }
+                });
+            }
 
-                            // Update the title with the interface name
-                            var updatedLayout = Object.assign({}, layout);
-                            updatedLayout.title.text = 'Network Bandwidth - Interface: ' + interfaceName;
-
-                            // Create the chart using Plotly
-                            Plotly.newPlot('bandwidthChart', chartData, updatedLayout, config);
-                        } else {
-                            console.error('Invalid network data received:', data);
+            // Update system process information
+            function updateProcesses() {
+                $.ajax({
+                    url: 'processes.php',
+                    dataType: 'json',
+                    success: function(data) {
+                        console.log('Process data:', data);
+                        
+                        // CPU Utilization
+                        if (data.cpu) {
+                            var cpuUsage = data.cpu.usage || 0;
+                            var cpuCores = data.cpu.cores || 1;
+                            var cpuPercent = Math.min(100, Math.round((cpuUsage / cpuCores) * 100));
+                            updateCPU('.cpu-chart', cpuPercent, 'CPU', cpuCores, cpuUsage);
+                        }
+                        
+                        // Memory Utilization
+                        if (data.memory) {
+                            updateMemoryProcess(
+                                '.memory-chart', 
+                                data.memory.used || 0, 
+                                data.memory.total || 0, 
+                                'Memory'
+                            );
+                        }
+                        
+                        // Process Utilization (using CPU load average as proxy)
+                        if (data.cpu) {
+                            var processPercent = Math.min(100, Math.round((data.cpu.usage / data.cpu.cores) * 100));
+                            updateProcess('.process-chart', processPercent, 'Process');
                         }
                     },
                     error: function(xhr, status, error) {
-                        console.error('Error fetching network data:', error);
-                    },
-                    complete: function () {
-                        // Only continue updating if modal is visible
-                        if ($('#statsModal').hasClass('show')) {
-                            setTimeout(updateChart, 1000);
-                        }
-                    }
-                });
-            }
-
-            // Function to update the processes chart with data from the server
-            function updateProcesses() {
-                var selectedInterface = $('#networkInterfaceSelector').val();
-
-                $.ajax({
-                    url: 'processes.php' + (selectedInterface ? '?interface=' + selectedInterface : ''),
-                    dataType: 'json',
-                    success: function (data) {
-                        updateCPU('.cpu-chart', data.cpu, 'CPU', data.cores);
-                        updateMemoryProcess('.memory-chart', data.memory.used, data.memory.total, 'Memory');
-                        updateProcess('.process-chart', data.process, 'Process');
-                    },
-                    error: function (error) {
-                        console.error('Error fetching process data:', error);
+                        console.error('Process fetch error:', xhr.responseText);
+                        $('#processes').prepend('<p class="text-danger">Failed to fetch process data</p>');
                     },
                     complete: function() {
-                        // Only continue updating if modal is visible
+                        // Only schedule next update if modal is still visible
                         if ($('#statsModal').hasClass('show')) {
-                            setTimeout(updateProcesses, 3000);
+                            processUpdateTimer = setTimeout(updateProcesses, 3000);
                         }
                     }
                 });
             }
 
-            // Function to update the memory chart with usage data
+            // Update Memory usage display
             function updateMemoryProcess(selector, usedMemory, totalMemory, label) {
                 $(selector).empty();
-                var usedGB = usedMemory / (1024 * 1024); // Convert usedMemory from kB to GB
-                var totalGB = totalMemory / (1024 * 1024); // Convert totalMemory from kB to GB
-                var usedPercentage = (usedMemory / totalMemory) * 100;
-
-                var chartBar = $('<div>').addClass('chart-bar').css('width', usedPercentage + '%');
-                var chartLabel = $('<span>').text(usedPercentage.toFixed(2) + '% (' + usedGB.toFixed(2) + ' GB / ' + totalGB.toFixed(2) + ' GB)');
-                $(selector).append(chartBar, chartLabel);
+                var usedGB = usedMemory / (1024 * 1024);
+                var totalGB = totalMemory / (1024 * 1024);
+                var usedPercentage = totalMemory ? (usedMemory / totalMemory * 100) : 0;
+                
+                $(selector).append(
+                    $('<div>').addClass('metrics-value').html('<strong>' + usedPercentage.toFixed(2) + '%</strong>'),
+                    $('<div>').addClass('metrics-detail').text(usedGB.toFixed(2) + ' GB / ' + totalGB.toFixed(2) + ' GB')
+                );
             }
 
-            // Function to update the CPU chart with usage data
-            function updateCPU(selector, value, label, cores) {
+            // Update CPU usage display
+            function updateCPU(selector, value, label, cores, rawUsage) {
                 $(selector).empty();
-                var chartBar = $('<div>').addClass('chart-bar').css('width', value + '%');
-                var chartLabel = $('<span>').text(value + '% (' + cores + ' CPU Cores)');
-                $(selector).append(chartBar, chartLabel);
+                $(selector).append(
+                    $('<div>').addClass('metrics-value').html('<strong>' + value + '%</strong>'),
+                    $('<div>').addClass('metrics-detail').text(rawUsage.toFixed(2) + ' / ' + cores + ' cores')
+                );
             }
 
-            // Function to update the process chart with usage data
+            // Update Process usage display
             function updateProcess(selector, value, label) {
                 $(selector).empty();
-                var chartBar = $('<div>').addClass('chart-bar').css('width', value + '%');
-                var chartLabel = $('<span>').text(value + '%');
-                $(selector).append(chartBar, chartLabel);
+                $(selector).append(
+                    $('<div>').addClass('metrics-value').html('<strong>' + value + '%</strong>')
+                );
             }
 
-            // Start updates when the modal is shown
+            // Modal show event - start all updates
             $('#statsModal').on('shown.bs.modal', function() {
+                // Clear any existing timers
+                clearTimers();
+                
+                // Reset data
+                bandwidthData = { timestamp: [], rx: [], tx: [] };
+                
+                // Populate interfaces and start updates
                 populateNetworkInterfaces();
-                updateChart();
                 updateProcesses();
             });
 
-            // Add event listener for interface selection change
+            // Interface selection changed
             $('#networkInterfaceSelector').on('change', function() {
-                // Save selected interface to localStorage
-                localStorage.setItem('selectedNetworkInterface', $(this).val());
-
-                // Reset bandwidth data when interface changes
-                bandwidthData = {
-                    timestamp: [],
-                    rx: [],
-                    tx: []
-                };
-                updateChart();
-                updateProcesses();
+                var selectedInterface = $(this).val();
+                if (selectedInterface) {
+                    localStorage.setItem('selectedNetworkInterface', selectedInterface);
+                    
+                    // Reset bandwidth data for new interface
+                    bandwidthData = { timestamp: [], rx: [], tx: [] };
+                    
+                    // Start chart updates
+                    clearTimeout(chartUpdateTimer);
+                    updateChart();
+                }
             });
 
-            // Stop updates when modal is hidden
+            // Modal hide event - clean up
             $('#statsModal').on('hidden.bs.modal', function() {
-                // Clear all intervals
-                bandwidthData = {
-                    timestamp: [],
-                    rx: [],
-                    tx: []
-                };
+                clearTimers();
+                bandwidthData = { timestamp: [], rx: [], tx: [] };
             });
+            
+            // Helper to clear all update timers
+            function clearTimers() {
+                if (chartUpdateTimer) {
+                    clearTimeout(chartUpdateTimer);
+                    chartUpdateTimer = null;
+                }
+                
+                if (processUpdateTimer) {
+                    clearTimeout(processUpdateTimer);
+                    processUpdateTimer = null;
+                }
+            }
         }
     });
 </script>
