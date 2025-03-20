@@ -14,6 +14,7 @@ Version 1.6.0 | Last Updated: March 2025
   - [System Logs](#system-logs)
   - [Messaging System](#messaging-system)
   - [Thumbnail Management](#thumbnail-management)
+  - [System Stats](#system-stats)
 - [Viewer Guide](#viewer-guide)
   - [Logging In](#viewer-logging-in)
   - [Landing Page](#landing-page)
@@ -29,7 +30,7 @@ Version 1.6.0 | Last Updated: March 2025
 
 ## Introduction
 
-BLIVE RePlay is a comprehensive video recording and streaming system designed for Bethany Church. It facilitates live streaming, video recording management, intelligent scheduling, and now includes thumbnail generation and management features.
+BLIVE RePlay is a comprehensive video recording and streaming system designed for Bethany Church. It facilitates live streaming, video recording management, intelligent scheduling, and now includes the new System Stats feature to monitor system performance.
 
 ## Admin Guide
 
@@ -196,6 +197,28 @@ Click the "Log" button in the top navigation menu.
 #### Using Thumbnails
 - Thumbnails can be used to quickly identify recordings.
 - Thumbnails are also used in the viewer's recordings list for easier navigation.
+
+### System Stats
+
+#### Overview
+The System Stats feature provides administrators with real-time data on the system's performance and usage. This information is crucial for maintaining the health and efficiency of the BLIVE RePlay system.
+
+#### Accessing System Stats
+1. Click the "System Stats" button in the top navigation menu.
+2. The System Stats dashboard will display various metrics related to the system's performance.
+
+#### Key Metrics
+The System Stats dashboard includes the following metrics:
+- **CPU Usage**: Displays the current CPU usage percentage.
+- **Memory Usage**: Shows the amount of RAM being used.
+- **Network Activity**: Monitors the network input and output rates.
+
+#### Selecting Network Interface
+Administrators can select the network interface to monitor network activity. To select the network interface:
+1. Click the "Network Interface" dropdown on the System Stats dashboard.
+2. Select the desired network interface from the list.
+
+By using the System Stats feature, administrators can ensure the BLIVE RePlay system operates smoothly and efficiently.
 
 ## Viewer Guide
 
