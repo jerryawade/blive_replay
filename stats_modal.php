@@ -265,13 +265,13 @@
                 displayModeBar: false 
             };
 
-            // Update network bandwidth chart
+// Update network bandwidth chart
             function updateChart() {
                 var selectedInterface = $('#networkInterfaceSelector').val();
                 if (!selectedInterface) {
                     return;
                 }
-                
+
                 $.ajax({
                     url: 'processes.php?data=network&interface=' + selectedInterface,
                     dataType: 'json',
@@ -281,7 +281,7 @@
                             $('#bandwidthChart').html(`<p class="text-danger">Error: ${data.error}</p>`);
                             return;
                         }
-                        
+
                         var rx = parseFloat(data.rx || 0).toFixed(2);
                         var tx = parseFloat(data.tx || 0).toFixed(2);
                         var interfaceName = data.interface || selectedInterface;
@@ -304,7 +304,9 @@
                             mode: 'lines+markers',
                             name: 'Download (Mbps)',
                             line: { color: '#3ea9de', width: 2 },
-                            marker: { size: 4 }
+                            marker: { size: 4 },
+                            fill: 'tozeroy', // Adding shading
+                            fillcolor: 'rgba(62, 169, 222, 0.2)' // Shading color
                         };
 
                         var traceTx = {
@@ -313,12 +315,14 @@
                             mode: 'lines+markers',
                             name: 'Upload (Mbps)',
                             line: { color: '#dc3545', width: 2 },
-                            marker: { size: 4 }
+                            marker: { size: 4 },
+                            fill: 'tozeroy', // Adding shading
+                            fillcolor: 'rgba(220, 53, 69, 0.2)' // Shading color
                         };
 
                         // Update chart title to show current interface
                         layout.title.text = 'Network Bandwidth - Interface: ' + interfaceName;
-                        
+
                         // Create or update the chart
                         Plotly.newPlot('bandwidthChart', [traceRx, traceTx], layout, config);
                     },
