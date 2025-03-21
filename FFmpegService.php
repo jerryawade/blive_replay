@@ -2,7 +2,7 @@
 /**
  * FFmpegService.php
  *
- * A robust service class to handle FFmpeg operations for BLIVE RePlay with extensive logging.
+ * Handle FFmpeg operations for BLIVE RePlay.
  */
 
 class FFmpegService
@@ -404,7 +404,7 @@ class FFmpegService
         }
     }
 
-    public function cleanFFmpegLog(int $days = 14): bool
+    public function cleanFFmpegLog(int $days = 1): bool
     {
         $this->log("Cleaning FFmpeg log, keeping $days days");
         try {
