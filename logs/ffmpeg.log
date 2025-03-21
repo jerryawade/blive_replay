@@ -18450,3 +18450,9 @@ libpostproc    55.  9.100 / 55.  9.100
 [2025-03-01 18:04:24] Control files cleanup: success
 [2025-03-01 18:04:24] === Stop Recording Process Complete ===
 
+[2025-03-03 08:39:04] Creating directory: recordings
+[2025-03-03 08:39:04] Directory creation result: success
+[2025-03-03 08:39:04] Directory permissions: 0755
+[2025-03-03 08:39:04] Creating directory: thumbnails
+[2025-03-03 08:39:04] Directory creation result: success
+[2025-03-03 08:39:04] Directory permissions: 0755
