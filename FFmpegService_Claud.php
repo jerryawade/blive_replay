@@ -1531,7 +1531,7 @@ class FFmpegService
      * @param int $days Number of days to keep logs for
      * @return bool Success status
      */
-    public function cleanFFmpegLog(int $days = 14): bool
+    public function cleanFFmpegLog(int $days = 1): bool
     {
         $this->log("Cleaning FFmpeg log file (keeping $days days)");
 

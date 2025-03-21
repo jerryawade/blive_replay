@@ -481,6 +481,7 @@ if (isAdmin()) {
 }
 
 include 'templates/footer.php';
+include 'stats_modal.php';
 
 // Add scheduler JavaScript if enabled
 if (isAdmin() && isset($settings['enable_scheduler']) && $settings['enable_scheduler']) {
@@ -660,6 +661,7 @@ if (isAdmin()) {
       });
     }
   });
+        
   </script>';
 }
 ?>
