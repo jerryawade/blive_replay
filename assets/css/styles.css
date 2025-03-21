@@ -1,0 +1,926 @@
+/*
+ * BLIVE RePlay - Comprehensive Stylesheet
+ * Last Updated: March 2025
+ * Provides styling for responsive design across devices
+ */
+
+/* Reset and Base Styles */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Logo Styles */
+.replay-logo {
+    width: 300px;
+    height: auto;
+    display: block;
+    margin: 0;
+}
+
+/* Recording Status Styles */
+.recording-status {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.recording-active {
+    background-color: #ffdede;
+    color: #dc3545;
+}
+
+.recording-inactive {
+    background-color: #e8f5e9;
+    color: #28a745;
+}
+
+#recordingTimer {
+    font-size: 1.2em;
+    margin-top: 5px;
+}
+
+/* Animations */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Thumbnail Styles */
+.thumbnail-container {
+    width: 230px;
+    height: 130px;
+    overflow: hidden;
+    margin-right: 15px;
+}
+
+.thumbnail-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Form Styles */
+.role-change-form {
+    margin: 0;
+    padding: 0;
+}
+
+.role-change-form select {
+    min-width: 100px;
+}
+
+/* Landing Page Styles */
+.landing-container {
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.landing-options {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    align-items: center;
+    margin-top: 2rem;
+}
+
+.landing-option {
+    text-align: center;
+    transition: transform 0.2s;
+}
+
+.landing-option:hover {
+    transform: scale(1.05);
+}
+
+.landing-image {
+    width: 300px;
+    height: 200px;
+    object-fit: contain;
+    margin-bottom: 1rem;
+}
+
+.landing-option a {
+    color: rgb(62, 169, 222);
+    text-decoration: none;
+}
+
+.landing-option a:hover {
+    color: rgb(42, 149, 202);
+}
+
+/* Custom Button Styles */
+.btn.custom-btn {
+    background-color: rgb(62, 169, 222);
+    border-color: rgb(62, 169, 222);
+    color: white;
+    transition: all 0.2s ease;
+}
+
+.btn.custom-btn:hover {
+    background-color: rgb(42, 149, 202);
+    border-color: rgb(42, 149, 202);
+    color: white;
+}
+
+/* User Cards */
+.user-cards .card {
+    border: 1px solid rgba(0, 0, 0, .125);
+    transition: box-shadow 0.3s ease;
+}
+
+.user-cards .card:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, .1);
+}
+
+.user-info {
+    min-width: 120px;
+}
+
+/* Icon Button Styles */
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 50px;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-sm.icon-btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.icon-btn i {
+    font-size: 1rem;
+}
+
+.btn-sm.icon-btn i {
+    font-size: 0.875rem;
+}
+
+/* Input Group Styles */
+.input-group-text {
+    background-color: #f8f9fa;
+    border-right: none;
+}
+
+.input-group-text i {
+    font-size: 1.1rem;
+    color: #6c757d;
+}
+
+.btn-sm.input-group-text i {
+    font-size: 0.875rem;
+}
+
+.input-group .form-control {
+    border-left: none;
+}
+
+.input-group .form-control:focus {
+    border-left: none;
+    box-shadow: none;
+}
+
+.input-group:focus-within .input-group-text {
+    border-color: #86b7fe;
+}
+
+/* Alert Styles */
+.alert i {
+    font-size: 1.2rem;
+}
+
+/* Form Check Label Icons */
+.form-check-label i {
+    color: #6c757d;
+}
+
+/* Button Group Styles */
+.btn-group .icon-btn {
+    justify-content: center;
+    min-width: 140px;
+}
+
+/* Login Form Specific Styles */
+.login-form {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* Modal Specific Styles */
+.modal-title i {
+    font-size: 1.1rem;
+}
+
+.modal.fade .modal-dialog {
+    transform: none !important;
+}
+
+.modal-content {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+/* Responsive Styles - Mobile Adjustments */
+@media (max-width: 768px) {
+    /* Global Mobile Margin Override */
+    .ms-2, .ms-md-2 {
+        margin-left: 0 !important;
+    }
+
+    /* Responsive Layout Adjustments */
+    .list-group-item {
+        padding: 15px 10px;
+    }
+
+    .thumbnail-container {
+        width: 160px;
+        height: 90px;
+        margin-right: 10px;
+    }
+
+    .d-flex {
+        flex-direction: column;
+    }
+
+    .flex-grow-1 {
+        width: 100%;
+        margin: 10px 0;
+    }
+
+    .btn {
+        width: 100%;
+        margin: 5px 0;
+    }
+
+    .replay-logo {
+        width: 200px;
+    }
+
+    h5.mb-1 {
+        font-size: 1rem;
+    }
+
+    .d-flex.justify-content-between.align-items-center {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .d-flex.align-items-center.gap-2 {
+        margin-top: 15px;
+    }
+
+    /* Landing Page Mobile Styles */
+    .landing-options {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .landing-image {
+        width: 200px;
+        height: 150px;
+    }
+
+    /* Modal Mobile Styles */
+    .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+
+    .modal-body {
+        height: calc(100vh - 200px) !important;
+        padding: 1rem;
+    }
+
+    .modal-footer {
+        padding: 0.75rem;
+        background: white;
+        border-top: 1px solid #dee2e6;
+    }
+
+    .form-control {
+        font-size: 16px; /* Prevents iOS zoom on input focus */
+    }
+
+    /* Form Responsive Adjustments */
+    .role-change-form .input-group,
+    .role-change-form .form-select {
+        width: 100%;
+    }
+
+    /* Additional Mobile Responsive Tweaks */
+    .w-md-auto {
+        width: 100% !important;
+    }
+
+    .d-flex.flex-md-row {
+        flex-direction: column !important;
+    }
+
+    .btn-group .icon-btn {
+        min-width: auto;
+    }
+
+    /* Manage Users Table Mobile Adjustments */
+    #usersModal .table-responsive {
+        overflow-x: hidden; /* Remove horizontal scroll for cleaner look */
+    }
+
+    #usersModal .table {
+        display: block;
+        width: 100%;
+        margin-bottom: 0;
+    }
+
+    #usersModal .table thead {
+        display: none; /* Hide headers on mobile as they'll be implied by layout */
+    }
+
+    #usersModal .table tbody,
+    #usersModal .table tr,
+    #usersModal .table td {
+        display: block;
+        width: 100%;
+    }
+
+    #usersModal .table tr {
+        border: 1px solid #dee2e6;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        background-color: #fff;
+        border-radius: 0.25rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    #usersModal .table td {
+        padding: 0.5rem;
+        border: none; /* Remove cell borders for cleaner stacking */
+    }
+
+    /* Username Cell */
+    #usersModal .table td:first-child {
+        font-weight: bold;
+        font-size: 1.1rem;
+        padding-bottom: 0.25rem;
+        border-bottom: 1px solid #e9ecef; /* Separator between username and other info */
+    }
+
+    /* Role Cell */
+    #usersModal .table td:nth-child(2) {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+
+    /* Actions Cell */
+    #usersModal .table td:nth-child(3) {
+        padding-top: 0;
+    }
+
+    #usersModal .action-buttons-container {
+        flex-direction: column !important; /* Stack buttons vertically */
+        gap: 0.5rem;
+    }
+
+    #usersModal .action-buttons-container .btn {
+        width: 100%; /* Full width buttons */
+        margin: 0; /* Remove default button margin */
+    }
+
+    /* Ensure role select form fits nicely and icon aligns */
+    #usersModal .role-change-form .input-group {
+        display: flex !important; /* Override Bootstrap if needed */
+        flex-wrap: nowrap !important; /* Prevent wrapping to new line */
+        align-items: center; /* Vertically align icon and select */
+        width: 100%;
+        max-width: 200px; /* Limit width for better appearance */
+        margin: 0 auto;
+    }
+
+    #usersModal .role-change-form .input-group .input-group-text {
+        flex-shrink: 0; /* Prevent icon from shrinking */
+        border-right: none; /* Seamless connection to select */
+        padding: 0.25rem 0.5rem; /* Consistent padding */
+    }
+
+    #usersModal .role-change-form .input-group .form-select {
+        flex-grow: 1; /* Allow select to take remaining space */
+        border-left: none; /* Seamless connection to icon */
+        min-width: 0; /* Prevent overflow */
+    }
+}
+
+/* Print Styles */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    .modal-backdrop {
+        display: none !important;
+    }
+
+    .icon-btn i {
+        display: none;
+    }
+
+    /* Additional print-specific styles would go here */
+}
+
+/* Password Change Container Animation */
+.password-change-container form {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/*
+ * BLIVE RePlay - Comprehensive Stylesheet
+ * Last Updated: March 2025
+ * Provides styling for responsive design across devices
+ */
+
+/* Reset and Base Styles */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Logo Styles */
+.replay-logo {
+    width: 300px;
+    height: auto;
+    display: block;
+    margin: 0;
+}
+
+/* Recording Status Styles */
+.recording-status {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.recording-active {
+    background-color: #ffdede;
+    color: #dc3545;
+}
+
+.recording-inactive {
+    background-color: #e8f5e9;
+    color: #28a745;
+}
+
+#recordingTimer {
+    font-size: 1.2em;
+    margin-top: 5px;
+}
+
+/* Animations */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Thumbnail Styles */
+.thumbnail-container {
+    width: 230px;
+    height: 130px;
+    overflow: hidden;
+    margin-right: 15px;
+}
+
+.thumbnail-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Form Styles */
+.role-change-form {
+    margin: 0;
+    padding: 0;
+}
+
+.role-change-form select {
+    min-width: 100px;
+}
+
+/* Landing Page Styles */
+.landing-container {
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.landing-options {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    align-items: center;
+    margin-top: 2rem;
+}
+
+.landing-option {
+    text-align: center;
+    transition: transform 0.2s;
+}
+
+.landing-option:hover {
+    transform: scale(1.05);
+}
+
+.landing-image {
+    width: 300px;
+    height: 200px;
+    object-fit: contain;
+    margin-bottom: 1rem;
+}
+
+.landing-option a {
+    color: rgb(62, 169, 222);
+    text-decoration: none;
+}
+
+.landing-option a:hover {
+    color: rgb(42, 149, 202);
+}
+
+/* Custom Button Styles */
+.btn.custom-btn {
+    background-color: rgb(62, 169, 222);
+    border-color: rgb(62, 169, 222);
+    color: white;
+    transition: all 0.2s ease;
+}
+
+.btn.custom-btn:hover {
+    background-color: rgb(42, 149, 202);
+    border-color: rgb(42, 149, 202);
+    color: white;
+}
+
+/* User Cards */
+.user-cards .card {
+    border: 1px solid rgba(0, 0, 0, .125);
+    transition: box-shadow 0.3s ease;
+}
+
+.user-cards .card:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, .1);
+}
+
+.user-info {
+    min-width: 120px;
+}
+
+/* Icon Button Styles */
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 50px;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-sm.icon-btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.icon-btn i {
+    font-size: 1rem;
+}
+
+.btn-sm.icon-btn i {
+    font-size: 0.875rem;
+}
+
+/* Input Group Styles */
+.input-group-text {
+    background-color: #f8f9fa;
+    border-right: none;
+}
+
+.input-group-text i {
+    font-size: 1.1rem;
+    color: #6c757d;
+}
+
+.btn-sm.input-group-text i {
+    font-size: 0.875rem;
+}
+
+.input-group .form-control {
+    border-left: none;
+}
+
+.input-group .form-control:focus {
+    border-left: none;
+    box-shadow: none;
+}
+
+.input-group:focus-within .input-group-text {
+    border-color: #86b7fe;
+}
+
+/* Alert Styles */
+.alert i {
+    font-size: 1.2rem;
+}
+
+/* Form Check Label Icons */
+.form-check-label i {
+    color: #6c757d;
+}
+
+/* Button Group Styles */
+.btn-group .icon-btn {
+    justify-content: center;
+    min-width: 140px;
+}
+
+/* Login Form Specific Styles */
+.login-form {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* Modal Specific Styles */
+.modal-title i {
+    font-size: 1.1rem;
+}
+
+.modal.fade .modal-dialog {
+    transform: none !important;
+}
+
+.modal-content {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+/* Responsive Styles - Mobile Adjustments */
+@media (max-width: 768px) {
+    /* Global Mobile Margin Override */
+    .ms-2, .ms-md-2 {
+        margin-left: 0 !important;
+    }
+
+    /* Responsive Layout Adjustments */
+    .list-group-item {
+        padding: 15px 10px;
+    }
+
+    .thumbnail-container {
+        width: 160px;
+        height: 90px;
+        margin-right: 10px;
+    }
+
+    .d-flex {
+        flex-direction: column;
+    }
+
+    .flex-grow-1 {
+        width: 100%;
+        margin: 10px 0;
+    }
+
+    .btn {
+        width: 100%;
+        margin: 5px 0;
+    }
+
+    .replay-logo {
+        width: 200px;
+    }
+
+    h5.mb-1 {
+        font-size: 1rem;
+    }
+
+    .d-flex.justify-content-between.align-items-center {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .d-flex.align-items-center.gap-2 {
+        margin-top: 15px;
+    }
+
+    /* Landing Page Mobile Styles */
+    .landing-options {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .landing-image {
+        width: 200px;
+        height: 150px;
+    }
+
+    /* Modal Mobile Styles */
+    .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+
+    .modal-body {
+        height: calc(100vh - 200px) !important;
+        padding: 1rem;
+    }
+
+    .modal-footer {
+        padding: 0.75rem;
+        background: white;
+        border-top: 1px solid #dee2e6;
+    }
+
+    .form-control {
+        font-size: 16px; /* Prevents iOS zoom on input focus */
+    }
+
+    /* Form Responsive Adjustments */
+    .role-change-form .input-group,
+    .role-change-form .form-select {
+        width: 100%;
+    }
+
+    /* Additional Mobile Responsive Tweaks */
+    .w-md-auto {
+        width: 100% !important;
+    }
+
+    .d-flex.flex-md-row {
+        flex-direction: column !important;
+    }
+
+    .btn-group .icon-btn {
+        min-width: auto;
+    }
+
+    /* Manage Users Table Mobile Adjustments */
+    #usersModal .table-responsive {
+        overflow-x: hidden; /* Remove horizontal scroll for cleaner look */
+    }
+
+    #usersModal .table {
+        display: block;
+        width: 100%;
+        margin-bottom: 0;
+    }
+
+    #usersModal .table thead {
+        display: none; /* Hide headers on mobile as they'll be implied by layout */
+    }
+
+    #usersModal .table tbody,
+    #usersModal .table tr,
+    #usersModal .table td {
+        display: block;
+        width: 100%;
+    }
+
+    #usersModal .table tr {
+        border: 1px solid #dee2e6;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        background-color: #fff;
+        border-radius: 0.25rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    #usersModal .table td {
+        padding: 0.5rem;
+        border: none; /* Remove cell borders for cleaner stacking */
+    }
+
+    /* Username Cell */
+    #usersModal .table td:first-child {
+        font-weight: bold;
+        font-size: 1.1rem;
+        padding-bottom: 0.25rem;
+        border-bottom: 1px solid #e9ecef; /* Separator between username and other info */
+    }
+
+    /* Role Cell */
+    #usersModal .table td:nth-child(2) {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+
+    /* Actions Cell */
+    #usersModal .table td:nth-child(3) {
+        padding-top: 0;
+    }
+
+    #usersModal .action-buttons-container {
+        flex-direction: column !important; /* Stack buttons vertically */
+        gap: 0.5rem;
+    }
+
+    #usersModal .action-buttons-container .btn {
+        width: 100%; /* Full width buttons */
+        margin: 0; /* Remove default button margin */
+    }
+
+    /* Ensure role select form fits nicely and icon aligns */
+    #usersModal .role-change-form .input-group {
+        display: flex !important; /* Override Bootstrap if needed */
+        flex-wrap: nowrap !important; /* Prevent wrapping to new line */
+        align-items: center; /* Vertically align icon and select */
+        width: 100%;
+        max-width: 200px; /* Limit width for better appearance */
+        margin: 0 auto;
+    }
+
+    #usersModal .role-change-form .input-group .input-group-text {
+        flex-shrink: 0; /* Prevent icon from shrinking */
+        border-right: none; /* Seamless connection to select */
+        padding: 0.25rem 0.5rem; /* Consistent padding */
+    }
+
+    #usersModal .role-change-form .input-group .form-select {
+        flex-grow: 1; /* Allow select to take remaining space */
+        border-left: none; /* Seamless connection to icon */
+        min-width: 0; /* Prevent overflow */
+    }
+}
+
+/* Print Styles */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    .modal-backdrop {
+        display: none !important;
+    }
+
+    .icon-btn i {
+        display: none;
+    }
+
+    /* Additional print-specific styles would go here */
+}
+
+/* Password Change Container Animation */
+.password-change-container form {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+#nextScheduleBadge {
+    font-size: 0.75rem;
+    padding: 0.25em 0.5em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    top: -16px !important;
+    left: 145px !important;
+    transform: translateX(-50%);
+    z-index: 10;
+}
+
+@media (max-width: 767.98px) {
+    #nextScheduleBadge {
+        top: -2.5em;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 90vw;
+        font-size: 0.65rem;
+        padding: 0.2em 0.4em;
+        white-space: normal;
+        text-align: center;
+    }
+}
