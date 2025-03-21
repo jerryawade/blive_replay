@@ -195,6 +195,11 @@
                 </div>
             </div>
             <div class="modal-footer d-print-none">
+                <a href="log_archiver_utility.php" class="btn btn-info icon-btn me-auto">
+                    <i class="bi bi-archive"></i>
+                    Log Archiver Utility
+                </a>
+                <button type
                 <button type="button" class="btn btn-danger icon-btn" id="clearCurrentLogBtn" style="display: none;">
                     <i class="bi bi-trash"></i>
                     Clear Log
